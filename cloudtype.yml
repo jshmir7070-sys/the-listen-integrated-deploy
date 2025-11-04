@@ -1,0 +1,28 @@
+name: the-listen-integrated
+region: seoul
+
+app:
+  name: the-listen-integrated
+  platform: node
+  build:
+    commands:
+      - npm install
+  start:
+    command: npm run start
+    env:
+      EXPO_PUBLIC_KAKAO_JS_KEY: 카카오_JavaScript_키
+      EXPO_PUBLIC_KAKAO_REST_KEY: 카카오_REST_API_키
+      EXPO_PUBLIC_SUPABASE_URL: https://xxxx.supabase.co
+      EXPO_PUBLIC_SUPABASE_KEY: supabase_anon_key
+      NODE_ENV: production
+  ports:
+    - 8081
+  autoDeploy: true
+
+resources:
+  cpu: 1
+  memory: 1024
+  disk: 1
+
+domains:
+  - name: the-listen-integrated.cloudtype.app
