@@ -2,43 +2,50 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>The Listen 로그인</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Listen - 로그인</title>
   <style>
     body {
-      background-color: #0e1621;
+      font-family: 'Noto Sans KR', sans-serif;
+      background-color: #0d1117;
       color: white;
-      text-align: center;
-      font-family: "Noto Sans KR", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
     }
-    input, button {
-      margin: 10px;
-      padding: 10px;
-      border-radius: 6px;
+    h1 { font-size: 2.2rem; margin-bottom: 0.5rem; }
+    p { margin-bottom: 1.5rem; color: #c9d1d9; }
+    input {
+      width: 250px; padding: 10px; margin: 8px 0;
+      border: none; border-radius: 6px;
     }
     button {
-      background-color: #3b82f6;
-      color: white;
-      cursor: pointer;
+      background-color: #238636; border: none; color: white;
+      padding: 10px 20px; border-radius: 6px; cursor: pointer;
     }
+    button:hover { background-color: #2ea043; }
   </style>
 </head>
 <body>
   <h1>🚚 The Listen</h1>
-  <h3>AI·GPS 기반 배송 최적화 로그인</h3>
-  <input id="userId" type="text" placeholder="아이디"><br>
-  <input id="password" type="password" placeholder="비밀번호"><br>
+  <p>AI·GPS 기반 배송 최적화 로그인</p>
+
+  <input type="text" id="id" placeholder="아이디" />
+  <input type="password" id="pw" placeholder="비밀번호" />
   <button onclick="login()">로그인</button>
 
   <script>
     function login() {
-      const id = document.getElementById('userId').value;
-      const pw = document.getElementById('password').value;
+      const id = document.getElementById('id').value.trim();
+      const pw = document.getElementById('pw').value.trim();
 
       if (id === '1234' && pw === '1234') {
-        alert("로그인 성공! 다음 단계로 이동합니다.");
-        window.location.href = "/login";  // ✅ 이 부분이 핵심입니다
+        alert('로그인 성공! 다음 단계로 이동합니다.');
+        window.location.href = '/main';
       } else {
-        alert("아이디 또는 비밀번호가 올바르지 않습니다.");
+        alert('아이디 또는 비밀번호가 올바르지 않습니다.');
       }
     }
   </script>
