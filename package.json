@@ -1,7 +1,7 @@
 {
   "name": "the-listen-integrated-deploy",
   "version": "1.0.0",
-  "description": "AI·GPS 기반 배송 최적화 로그인 페이지 서버",
+  "description": "AI·GPS 기반 배송 최적화 시스템",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
