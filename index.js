@@ -3,20 +3,18 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// public 폴더 등록
+// 정적 파일
 app.use(express.static(path.join(__dirname, "public")));
 
-// 기본 페이지 -> 로그인
+// 라우팅
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// 로그인 → 메인 이동
 app.get("/main", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "main.html"));
 });
 
-// 메인 → 지도 이동
 app.get("/map", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "map.html"));
 });
