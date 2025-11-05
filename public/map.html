@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Listen - AI 배송경로 시스템</title>
+  <title>The Listen - AI 배송경로 통합버전</title>
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <style>
     body {
@@ -23,7 +23,7 @@
       width: 100%;
       height: 90vh;
     }
-    /* 고객 카드 */
+    /* 고객카드 */
     #customerCard {
       position: fixed;
       bottom: 0;
@@ -72,12 +72,12 @@
   </style>
 </head>
 <body>
-  <header>🚚 The Listen AI 배송경로 시스템</header>
+  <header>🚚 The Listen AI 배송경로 시스템 (고객 상세 + 순번마커)</header>
   <div id="map"></div>
 
   <!-- 고객카드 -->
   <div id="customerCard">
-    <div class="card-header">고객 배송 정보</div>
+    <div class="card-header">고객 상세 정보</div>
     <div id="card-content"></div>
   </div>
 
@@ -88,8 +88,9 @@
     });
 
     let myPosition = null;
+    const markerObjects = {};
 
-    // ✅ 내 위치 (파란 원)
+    // ✅ 내 위치 (파란 점)
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(
         (pos) => {
@@ -111,17 +112,17 @@
       );
     }
 
-    // ✅ 테스트용 아파트 동별 데이터
+    // ✅ 배송지 데이터 (동일 아파트, 동별 좌표)
     const deliveries = [
-      { id: "A001", name: "김지훈", phone: "010-1111-2222", address: "서울 강남구 푸르지오 101동", lat: 37.4981, lng: 127.0276 },
-      { id: "A002", name: "박은지", phone: "010-3333-4444", address: "서울 강남구 푸르지오 102동", lat: 37.4986, lng: 127.0280 },
-      { id: "A003", name: "최성민", phone: "010-5555-6666", address: "서울 강남구 푸르지오 103동", lat: 37.4990, lng: 127.0285 },
-      { id: "A004", name: "이수빈", phone: "010-7777-8888", address: "서울 강남구 푸르지오 104동", lat: 37.4994, lng: 127.0290 },
-      { id: "A005", name: "정다혜", phone: "010-1212-3434", address: "서울 강남구 푸르지오 105동", lat: 37.4998, lng: 127.0295 },
-      { id: "A006", name: "조현우", phone: "010-9090-8080", address: "서울 강남구 푸르지오 106동", lat: 37.5002, lng: 127.0300 },
+      { id: "A001", name: "김지훈", phone: "010-1111-2222", address: "서울 강남구 푸르지오 101동 1502호", boxes: 2, lat: 37.4981, lng: 127.0276 },
+      { id: "A002", name: "박은지", phone: "010-3333-4444", address: "서울 강남구 푸르지오 102동 502호", boxes: 1, lat: 37.4986, lng: 127.0280 },
+      { id: "A003", name: "최성민", phone: "010-5555-6666", address: "서울 강남구 푸르지오 103동 701호", boxes: 3, lat: 37.4990, lng: 127.0285 },
+      { id: "A004", name: "이수빈", phone: "010-7777-8888", address: "서울 강남구 푸르지오 104동 401호", boxes: 1, lat: 37.4994, lng: 127.0290 },
+      { id: "A005", name: "정다혜", phone: "010-1212-3434", address: "서울 강남구 푸르지오 105동 902호", boxes: 2, lat: 37.4998, lng: 127.0295 },
+      { id: "A006", name: "조현우", phone: "010-9090-8080", address: "서울 강남구 푸르지오 106동 1203호", boxes: 1, lat: 37.5002, lng: 127.0300 },
     ];
 
-    // ✅ 거리 계산 함수 (AI 순번용)
+    // ✅ 거리 계산 (Haversine)
     function calcDistance(lat1, lng1, lat2, lng2) {
       const R = 6371;
       const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -131,7 +132,7 @@
       return R * c;
     }
 
-    // ✅ 배송 순번 정렬
+    // ✅ AI 경로 정렬 (가까운 순서)
     function sortByDistance() {
       if (!myPosition) return deliveries;
       return deliveries
@@ -142,24 +143,30 @@
         .sort((a, b) => a.dist - b.dist);
     }
 
-    const markerObjects = {};
-
-    // ✅ 마커 생성 및 순번 표시
+    // ✅ 마커 생성 (순번 파란 원형)
     function drawMarkers() {
       const sorted = sortByDistance();
       sorted.forEach((d, idx) => {
         const order = idx + 1;
-        const markerEl = document.createElement("div");
-        markerEl.style.cssText = `
-          background:#007bff;color:white;border-radius:50%;width:28px;height:28px;
-          display:flex;align-items:center;justify-content:center;font-size:13px;
-          border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);
+        const markerHTML = `
+          <div style="
+            background:#007bff;
+            color:white;
+            border-radius:50%;
+            width:30px;
+            height:30px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-weight:600;
+            font-size:14px;
+            border:2px solid white;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3);
+          ">${order}</div>
         `;
-        markerEl.textContent = order;
-
         const customMarker = new kakao.maps.CustomOverlay({
           position: new kakao.maps.LatLng(d.lat, d.lng),
-          content: markerEl,
+          content: markerHTML,
           map: map,
         });
 
@@ -171,23 +178,25 @@
       });
     }
 
-    // ✅ 고객카드
+    // ✅ 고객카드 (상세 정보)
     function showCustomerCard(data, order) {
       const card = document.getElementById("customerCard");
       const content = document.getElementById("card-content");
       content.innerHTML = `
         <div style="text-align:center;">
-          <h3>${order}️⃣ 순번 / ${data.address}</h3>
-          <p><b>운송장:</b> ${data.id}</p>
-          <p><b>수령인:</b> ${data.name}</p>
+          <h3>${order}️⃣ 순번</h3>
+          <p><b>고객명:</b> ${data.name}</p>
           <p><b>전화번호:</b> ${data.phone}</p>
-          <button onclick="capturePhoto('${data.id}', '${data.address}')">📸 사진촬영 및 전송</button>
+          <p><b>상세주소:</b> ${data.address}</p>
+          <p><b>운송장번호:</b> ${data.id}</p>
+          <p><b>박스 수량:</b> ${data.boxes}개</p>
+          <button onclick="capturePhoto('${data.id}', '${data.address}')">📸 사진 촬영 및 전송</button>
         </div>
       `;
       card.classList.add("active");
     }
 
-    // ✅ 사진촬영 시 투명처리 + 완료알림
+    // ✅ 사진 전송 시 마커 투명화
     function capturePhoto(id, address) {
       const input = document.createElement("input");
       input.type = "file";
@@ -196,10 +205,11 @@
       input.onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
-          alert(`📸 ${address}\n운송장 ${id} 전송 완료!`);
+          alert(`📸 ${address}\n운송장 ${id} 사진 전송 완료!`);
           const marker = markerObjects[id];
           if (marker) {
-            marker.getContent().style.opacity = "0.4"; // 투명 처리
+            const el = marker.getContent();
+            el.style.opacity = "0.4"; // 배송완료 반투명 처리
           }
           document.getElementById("customerCard").classList.remove("active");
         }
@@ -207,7 +217,7 @@
       input.click();
     }
 
-    // 실행
+    // ✅ 지도 표시 실행
     setTimeout(drawMarkers, 1500);
   </script>
 </body>
