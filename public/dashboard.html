@@ -1,71 +1,54 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>The Listen - 대시보드</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>대시보드 - The Listen</title>
 <style>
-  body { margin:0; font-family:"Noto Sans KR",sans-serif; background:#f9fafb; color:#111; }
-  header { background:#007bff; color:white; padding:16px; text-align:center; font-size:20px; font-weight:700; }
-  .wrap { max-width:480px; margin:0 auto; padding:20px; }
-  .section { background:#fff; border-radius:12px; padding:18px; margin-bottom:14px; box-shadow:0 2px 6px rgba(0,0,0,.05); }
-  .section h2 { margin:0 0 10px 0; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
-  .count { font-weight:800; color:#007bff; }
-  button { width:100%; background:#007bff; color:white; border:none; border-radius:10px; padding:12px; margin-top:8px; font-size:15px; cursor:pointer; }
-  button:active { background:#005fcc; }
-  footer { text-align:center; margin-top:30px; color:#777; font-size:13px; }
-  .icon-btn { font-size:22px; cursor:pointer; }
-  .barcode-input { display:flex; gap:8px; margin-top:10px; }
-  input[type="text"] { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:14px; }
+  body{margin:0;background:#f5f7fa;font-family:"Noto Sans KR",sans-serif}
+  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:800}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:760px;margin:16px auto;padding:12px}
+  .card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 10px 26px rgba(0,0,0,.06);cursor:pointer}
+  .title{font-weight:900;margin-bottom:6px}
+  .num{font-weight:900;font-size:24px;text-align:right}
+  .muted{color:#6b7280;margin-top:6px}
 </style>
 </head>
 <body>
-<header>🚛 The Listen 대시보드</header>
-<div class="wrap">
-
-  <!-- 배송출발 -->
-  <div class="section">
-    <h2>🚚 배송출발 <span class="count">12건</span></h2>
-    <div class="barcode-input">
-      <input type="text" placeholder="운송장번호 입력 또는 스캔" />
-      <span class="icon-btn">📸</span>
-      <span class="icon-btn">🔍</span>
-    </div>
-    <button onclick="alert('최적 경로 계산 중... (카카오내비 연결)')">🗺 최적 경로 설정</button>
-    <button onclick="alert('배송 출발 준비 완료!')">출발하기 🚚</button>
+<header>대시보드</header>
+<div class="grid">
+  <div class="card" onclick="location.href='depart.html'">
+    <div class="title">배송출발</div>
+    <div class="num" id="scannedCnt">0</div>
+    <div class="muted">스캔 잡은 수량</div>
   </div>
-
-  <!-- 배송중 -->
-  <div class="section">
-    <h2>📦 배송중 <span class="count">7건</span></h2>
-    <button onclick="location.href='map.html'">🗺 현재 지도 보기</button>
+  <div class="card" onclick="location.href='map.html'">
+    <div class="title">배송중 (지도)</div>
+    <div class="num" id="inProgressCnt">0</div>
+    <div class="muted">진행 중</div>
   </div>
-
-  <!-- 배송완료 -->
-  <div class="section">
-    <h2>✅ 배송완료 <span class="count">18건</span></h2>
-    <button onclick="alert('완료 고객정보 카드로 이동합니다.')">📋 완료내역 보기</button>
+  <div class="card" onclick="location.href='completed.html'">
+    <div class="title">배송완료</div>
+    <div class="num" id="completedCnt">0</div>
+    <div class="muted">당일 완료</div>
   </div>
-
-  <!-- 실적 조회 -->
-  <div class="section">
-    <h2>📊 실적조회</h2>
-    <button onclick="alert('달력 로딩 중... 월별 실적 표시')">📅 달력 보기</button>
+  <div class="card" onclick="location.href='stats.html'">
+    <div class="title">실적 조회</div>
+    <div class="num">▶</div>
   </div>
-
+  <div class="card" onclick="location.href='howto.html'">
+    <div class="title">앱 사용방법/회사 설명</div>
+    <div class="num">▶</div>
+  </div>
 </div>
-<footer>© 2025 The Listen Logistics</footer>
-
 <script>
-// 후면카메라 테스트
-document.querySelectorAll('.icon-btn')[0].onclick = function(){
-  alert("📸 카메라 기능은 모바일에서 자동 실행됩니다.");
-};
-
-// 바코드 입력 테스트
-document.querySelectorAll('.icon-btn')[1].onclick = function(){
-  alert("🔍 블루투스 스캐너 또는 수동 입력창이 활성화됩니다.");
-};
+  const completed = JSON.parse(localStorage.getItem('completed')||'[]');
+  const today = new Date().toISOString().slice(0,10);
+  const todayDone = completed.filter(x=>x.date===today).length;
+  const scanned = Number(localStorage.getItem('scanned')||'0');
+  const total = Number(localStorage.getItem('totalDeliveries')||'0');
+  document.getElementById('completedCnt').innerText = todayDone;
+  document.getElementById('scannedCnt').innerText = scanned;
+  document.getElementById('inProgressCnt').innerText = Math.max((total||0) - todayDone, 0);
 </script>
 </body>
 </html>
