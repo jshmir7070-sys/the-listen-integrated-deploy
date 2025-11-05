@@ -1,16 +1,18 @@
-// 🚀 The Listen Cloudtype 서버 구동 코드
-const express = require('express');
+// 🚀 The Listen Cloudtype Node.js 서버
+const express = require("express");
+const path = require("path");
 const app = express();
-
-// Cloudtype이 자동으로 할당하는 포트 사용 (없으면 3000번)
 const PORT = process.env.PORT || 3000;
 
-// 기본 페이지 테스트용
-app.get('/', (req, res) => {
-  res.send('✅ The Listen Cloudtype Node.js 서버가 정상 작동 중입니다!');
+// public 폴더 안의 정적 파일(index.html)을 연결
+app.use(express.static(path.join(__dirname, "public")));
+
+// 기본 경로("/")로 접근 시 index.html 반환
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // 서버 실행
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ The Listen Cloudtype Node.js 서버가 포트 ${PORT}에서 작동 중입니다!`);
 });
