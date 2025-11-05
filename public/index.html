@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>The Listen - 로그인</title>
+<title>The Listen - 로그인 테스트</title>
 <style>
   body {
     margin: 0;
@@ -101,17 +101,16 @@
       <button type="button" class="btn" onclick="login()">로그인</button>
 
       <div class="links">
-        <a href="signup.html">회원가입</a>
+        <a href="#">회원가입</a>
         <div>
-          <a href="find_id.html" style="margin-right: 10px;">아이디찾기</a>
-          <a href="find_pw.html">비밀번호찾기</a>
+          <a href="#">아이디찾기</a>
+          <a href="#" style="margin-left: 10px;">비밀번호찾기</a>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-/* --- 저장된 아이디 불러오기 --- */
 window.onload = function() {
   const savedId = localStorage.getItem('savedId');
   if (savedId) {
@@ -120,7 +119,6 @@ window.onload = function() {
   }
 };
 
-/* --- 로그인 기능 --- */
 function login() {
   const id = document.getElementById('loginId').value.trim();
   const pw = document.getElementById('loginPw').value.trim();
@@ -131,13 +129,11 @@ function login() {
     return;
   }
 
-  // 아이디 저장 설정
   if (save) localStorage.setItem('savedId', id);
   else localStorage.removeItem('savedId');
 
-  // 로그인 성공 (임시 로직)
-  alert(`환영합니다, ${id}님!`);
-  window.location.href = 'dashboard.html';
+  alert(`✅ 환영합니다, ${id}님!`);
+  window.location.href = "dashboard.html";
 }
 </script>
 </body>
