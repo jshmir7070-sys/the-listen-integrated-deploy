@@ -13,11 +13,9 @@
   .row{margin-bottom:12px}
   label{display:block;font-weight:700;margin-bottom:6px}
   input,button{font-size:15px}
-  input[type="text"],input[type="password"],input[type="tel"]{
-    width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
-  }
+  input[type="text"],input[type="password"],input[type="tel"]{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px}
   .flex{display:flex;gap:8px}
-  .btn{background:#007bff;color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer}
+  .btn{background:#007bff;color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
   .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
   .foot{display:flex;justify-content:space-between;margin-top:12px}
   a{color:#007bff;text-decoration:none;font-weight:700}
@@ -29,7 +27,6 @@
   <div class="card">
     <div class="row"><label>이름</label><input id="name" type="text" placeholder="홍길동" /></div>
     <div class="row"><label>전화번호</label><input id="phone" type="tel" placeholder="010-0000-0000" /></div>
-
     <div class="row"><label>주소</label>
       <div class="flex">
         <input id="postcode" type="text" placeholder="우편번호" readonly />
@@ -38,13 +35,10 @@
     </div>
     <div class="row"><input id="addr1" type="text" placeholder="도로명 주소" readonly /></div>
     <div class="row"><input id="addr2" type="text" placeholder="상세주소(동·호수 등)" /></div>
-
     <div class="chk"><input id="smschk" type="checkbox" /> <label for="smschk">전화번호 인증에 동의합니다.</label></div>
     <div class="chk"><input id="agre" type="checkbox" /> <label for="agre">개인정보 처리방침에 동의합니다.</label></div>
-
     <div class="row"><label>아이디</label><input id="uid" type="text" placeholder="아이디" /></div>
     <div class="row"><label>비밀번호</label><input id="upw" type="password" placeholder="비밀번호" /></div>
-
     <div class="foot">
       <a href="index.html">취소</a>
       <button class="btn" onclick="submitJoin()">가입하기</button>
@@ -55,18 +49,32 @@
 function findPost(){
   new daum.Postcode({
     oncomplete: function(data){
-      document.getElementById('postcode').value = data.zonecode;
-      document.getElementById('addr1').value = data.roadAddress || data.jibunAddress;
-      document.getElementById('addr2').focus();
+      postcode.value = data.zonecode;
+      addr1.value = data.roadAddress || data.jibunAddress;
+      addr2.focus();
     }
   }).open();
 }
 function submitJoin(){
-  if(!document.getElementById('agre').checked){ alert('개인정보 동의가 필요합니다.'); return; }
+  if(!name.value||!phone.value||!postcode.value||!addr1.value||!uid.value||!upw.value){
+    alert('필수 항목을 모두 입력하세요.'); return;
+  }
+  if(!smschk.checked){ alert('전화번호 인증 동의가 필요합니다.'); return; }
+  if(!agre.checked){ alert('개인정보 처리방침 동의가 필요합니다.'); return; }
+  const users = JSON.parse(localStorage.getItem('users')||'[]');
+  if(users.find(u=>u.id===uid.value.trim())){ alert('이미 사용중인 아이디입니다.'); return; }
+  const user = {
+    id: uid.value.trim(),
+    pw: upw.value.trim(),
+    name: name.value.trim(),
+    phone: phone.value.trim(),
+    address: {postcode: postcode.value, addr1: addr1.value, addr2: addr2.value}
+  };
+  users.push(user);
+  localStorage.setItem('users', JSON.stringify(users));
   alert('가입이 완료되었습니다. 로그인해 주세요.');
   location.href='index.html';
 }
 </script>
 </body>
 </html>
-
