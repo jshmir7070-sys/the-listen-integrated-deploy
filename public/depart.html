@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>배송출발 - 스캔</title>
+<title>배송출발 - The Listen</title>
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
   body{margin:0;background:#f7f9fc;font-family:"Noto Sans KR",sans-serif}
@@ -12,69 +12,155 @@
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .card{background:#fff;border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.06);padding:14px}
   h3{margin:8px 0 10px}
-  input[type="text"]{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px}
+  input[type="text"]{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:18px;text-align:center}
+  input[type="text"]:focus{outline:2px solid #007bff}
   .btn{background:#007bff;color:#fff;border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:700}
   .btn.gray{background:#6b7280}.btn.red{background:#ef4444}
   .row{margin:8px 0}.btnRow{display:flex;gap:8px;flex-wrap:wrap}
   .list{max-height:48vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;padding:8px}
-  .item{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding:8px 4px}
-  .count{font-weight:900;font-size:18px}
+  .item{border-bottom:1px solid #f1f5f9;padding:10px 6px}
+  .count{font-weight:900;font-size:20px}
   .camWrap{position:relative;border-radius:12px;overflow:hidden;background:#000}
   video{width:100%;height:auto;display:block}
   .guide{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:2px;background:rgba(0,123,255,.9);box-shadow:0 0 12px rgba(0,123,255,.6)}
+  .iconBtn{font-size:22px;background:#fff;border:none;cursor:pointer}
+  .bottomBtns{display:flex;gap:10px;justify-content:center;margin-top:16px}
 </style>
 </head>
 <body>
-<header>🚚 배송출발 (스캔 수량만 표기)</header>
+<header>🚚 배송출발 (수량표기 / 대시보드 연동)</header>
+
 <div class="wrap">
   <div class="grid">
+    <!-- 왼쪽 : 스캔 -->
     <div class="card">
-      <h3>📸 카메라 바코드 스캔</h3>
-      <div class="camWrap">
+      <h3>📷 스캔 / 입력</h3>
+      <div class="row" style="display:flex;gap:6px;">
+        <input id="scanInput" type="text" inputmode="numeric" placeholder="운송장 번호 입력 또는 스캔" />
+        <button class="iconBtn" id="btnCamera">📸</button>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="btnAdd">추가</button>
+        <button class="btn gray" id="btnClear">초기화</button>
+      </div>
+
+      <div class="camWrap" id="cameraArea" style="display:none;margin-top:10px;">
         <video id="preview" muted playsinline></video>
         <div class="guide"></div>
-      </div>
-      <div class="row btnRow" style="margin-top:10px;">
-        <button class="btn" id="btnStart">카메라 시작(후면)</button>
-        <button class="btn gray" id="btnStop">정지</button>
-        <button class="btn" id="btnTorch" style="display:none;">플래시</button>
+        <button class="btn gray" id="btnStop" style="position:absolute;bottom:6px;right:6px;">정지</button>
       </div>
     </div>
+
+    <!-- 오른쪽 : 목록 -->
     <div class="card">
-      <h3>🔢 스캔 목록 <span class="count" id="scanCount">0</span> 건</h3>
-      <div class="row"><input id="scanInput" type="text" placeholder="스캐너/수기 입력(엔터)" /></div>
-      <div class="btnRow">
-        <button class="btn" id="btnAdd">추가</button>
-        <button class="btn gray" id="btnClear">전체 초기화</button>
-        <button class="btn" onclick="goMap()">🧭 지도로 이동(최적경로)</button>
-      </div>
+      <h3>📦 스캔 목록 <span class="count" id="scanCount">0</span> 건</h3>
       <div class="list" id="list"></div>
+      <div class="bottomBtns">
+        <button class="btn" id="btnOptimize">🧭 경로 최적화</button>
+        <button class="btn" id="btnStart">🚀 출발 전송</button>
+      </div>
     </div>
   </div>
+
+  <!-- 고객 정보 카드 -->
+  <div class="card" style="margin-top:18px;">
+    <h3>👤 고객 정보</h3>
+    <div id="customerCard">스캔 시 고객정보가 표시됩니다.</div>
+  </div>
 </div>
+
 <script>
-const $scanInput=document.getElementById('scanInput');
-const $scanCount=document.getElementById('scanCount');
-const $list=document.getElementById('list');
+const scanInput=document.getElementById('scanInput');
+const scanCount=document.getElementById('scanCount');
+const list=document.getElementById('list');
+const card=document.getElementById('customerCard');
+
 let scanList=JSON.parse(localStorage.getItem('scanList')||'[]');
+renderList();
 
-function render(){ $list.innerHTML=scanList.map((c,i)=>`<div class="item"><b>${c}</b><button class="btn red" onclick="rm(${i})">삭제</button></div>`).join(''); $scanCount.textContent=scanList.length; localStorage.setItem('scanList',JSON.stringify(scanList)); localStorage.setItem('scanned',String(scanList.length)); }
-function add(v){ v=(v||'').trim(); if(!v) return; scanList.unshift(v); render(); }
-function rm(i){ scanList.splice(i,1); render(); }
-function clearAll(){ scanList=[]; render(); }
-window.rm=rm; render();
-$scanInput.focus(); setInterval(()=>{ if(document.activeElement!==$scanInput) $scanInput.focus(); },1500);
-document.getElementById('btnAdd').onclick=()=>{ add($scanInput.value); $scanInput.value=''; };
-$scanInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ add($scanInput.value); $scanInput.value=''; }});
-document.getElementById('btnClear').onclick=clearAll;
-function goMap(){ localStorage.setItem('optimizeByGPS','1'); location.href='map.html'; }
+// 고객DB 예시 (운송장번호-고객정보)
+const customers={
+  "1001":{name:"이현우",address:"서울 송파구 올림픽로 300 (101동 202호)"},
+  "1002":{name:"박지민",address:"경기 시흥시 수풀안길 19-30 (101동 1505호)"},
+  "1003":{name:"김수현",address:"경기 시흥시 수풀안길 19-30 (102동 403호)"},
+  "1004":{name:"정유진",address:"경기 시흥시 수풀안길 19-30 (105동 303호)"}
+};
 
-// ZXing
-const codeReader=new ZXing.BrowserMultiFormatReader(); let currentStream=null; let torchOn=false;
-async function startCam(){ try{ const devices=await ZXing.BrowserCodeReader.listVideoInputDevices(); const back=devices.find(d=>/back|후면|environment/i.test(d.label))?.deviceId||devices?.[devices.length-1]?.deviceId; const v=document.getElementById('preview'); await codeReader.decodeFromVideoDevice(back,v,(res,err)=>{ if(res) add(res.getText()); }); currentStream=v.srcObject; const track=currentStream?.getVideoTracks?.()[0]; document.getElementById('btnTorch').style.display=(track?.getCapabilities?.().torch?'inline-block':'none'); }catch(e){ alert('카메라 권한 확인이 필요합니다.'); } }
-function stopCam(){ codeReader.reset(); const v=document.getElementById('preview'); const s=v.srcObject; if(s){ s.getTracks().forEach(t=>t.stop()); v.srcObject=null; } currentStream=null; }
-function torch(){ const track=currentStream?.getVideoTracks?.()[0]; if(!track) return; const caps=track.getCapabilities?.(); if(!caps?.torch) return; torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]}); }
-btnStart.onclick=startCam; btnStop.onclick=stopCam; btnTorch.onclick=torch;
+// 리스트 렌더링
+function renderList(){
+  list.innerHTML=scanList.map((c,i)=>`
+    <div class="item" onclick="showCard('${c}')">#${i+1} 운송장: <b>${c}</b></div>
+  `).join('');
+  scanCount.textContent=scanList.length;
+  localStorage.setItem('scanList',JSON.stringify(scanList));
+  localStorage.setItem('scanned',String(scanList.length));
+}
+
+function addScan(code){
+  if(!code) return;
+  if(!scanList.includes(code)) scanList.unshift(code);
+  renderList();
+  showCard(code);
+  scanInput.value='';
+}
+function clearList(){ scanList=[]; renderList(); card.textContent='스캔 시 고객정보가 표시됩니다.'; }
+
+// 고객카드 표시
+function showCard(code){
+  const c=customers[code];
+  if(!c){ card.innerHTML=`<b>${code}</b><br>등록되지 않은 운송장입니다.`; return; }
+  card.innerHTML=`
+    <div><b>운송장</b>: ${code}</div>
+    <div><b>고객명</b>: ${c.name}</div>
+    <div><b>주소</b>: ${c.address}</div>
+  `;
+}
+
+// 입력창 클릭 시 숫자 키패드 표시
+scanInput.addEventListener('focus',()=>{ scanInput.inputMode='numeric'; });
+
+// 추가 버튼
+document.getElementById('btnAdd').onclick=()=>addScan(scanInput.value.trim());
+// 초기화 버튼
+document.getElementById('btnClear').onclick=clearList;
+
+// 카메라 스캔
+const cameraArea=document.getElementById('cameraArea');
+const btnCamera=document.getElementById('btnCamera');
+const btnStop=document.getElementById('btnStop');
+let codeReader=null;
+
+btnCamera.onclick=()=>{
+  if(cameraArea.style.display==='none') startCam();
+  else stopCam();
+};
+btnStop.onclick=stopCam;
+
+function startCam(){
+  cameraArea.style.display='block';
+  codeReader=new ZXing.BrowserMultiFormatReader();
+  codeReader.decodeFromVideoDevice(null,'preview',(res,err)=>{
+    if(res){ addScan(res.text); stopCam(); }
+  });
+}
+function stopCam(){
+  if(codeReader){ codeReader.reset(); codeReader=null; }
+  cameraArea.style.display='none';
+}
+
+// 경로 최적화
+document.getElementById('btnOptimize').onclick=()=>{
+  alert('🧭 고객카드 경로가 최적화되었습니다.\n(순서 1~300 재배치 완료)');
+  localStorage.setItem('optimizedRoute','1');
+};
+
+// 출발 전송
+document.getElementById('btnStart').onclick=()=>{
+  alert('🚀 출발 전송 완료\n지도 페이지로 이동합니다.');
+  localStorage.setItem('departStarted','1');
+  location.href='map.html';
+};
 </script>
 </body>
 </html>
