@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>🚚 The Listen - AI·GPS 경로 최적화</title>
+  <title>🚚 The Listen - AI 경로 자동 정렬 배송관리</title>
   <style>
     html, body {
       margin: 0;
@@ -12,7 +12,9 @@
       height: 100%;
       overflow: hidden;
       font-family: 'Noto Sans KR', sans-serif;
+      background-color: #f5f5f5;
     }
+
     header {
       background-color: #007bff;
       color: white;
@@ -23,13 +25,12 @@
       z-index: 10;
       position: relative;
     }
+
     #map {
       width: 100%;
-      height: calc(100% - 60px);
-      position: absolute;
-      top: 60px;
-      left: 0;
+      height: 45%;
     }
+
     #gps-toggle {
       position: absolute;
       bottom: 20px;
@@ -56,40 +57,89 @@
     }
     #gps-toggle.active svg { fill: white; }
 
-    #resultBox {
+    /* 🚚 배송 카드 영역 */
+    #delivery-list {
       position: absolute;
-      bottom: 90px;
-      left: 10px;
-      background: rgba(255, 255, 255, 0.95);
-      border-radius: 8px;
-      padding: 8px 12px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-      font-size: 13px;
-      max-width: 250px;
-      z-index: 30;
-      line-height: 1.4;
+      bottom: 0;
+      width: 100%;
+      height: 55%;
+      background: white;
+      border-top-left-radius: 12px;
+      border-top-right-radius: 12px;
+      overflow-y: auto;
+      box-shadow: 0 -3px 8px rgba(0,0,0,0.2);
+      padding: 10px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+
+    .card strong {
+      color: #007bff;
+      font-weight: 600;
+    }
+
+    .card .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .card button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    #result-info {
+      font-size: 12px;
+      text-align: center;
+      color: #666;
+      margin-bottom: 8px;
     }
   </style>
 </head>
 <body>
-  <header>🚛 The Listen AI·GPS 경로 최적화</header>
+  <header>🚛 The Listen AI·GPS 자동 경로 정렬</header>
   <div id="map"></div>
-  <div id="resultBox">📍 GPS 활성화 후 배송지 거리 계산중...</div>
 
-  <!-- GPS 버튼 -->
+  <!-- GPS 토글 -->
   <div id="gps-toggle" title="GPS 위치 추적 토글">
     <svg viewBox="0 0 24 24">
       <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 3h-1.07a7.002 7.002 0 00-5.93-5.93V4a1 1 0 10-2 0v1.07a7.002 7.002 0 00-5.93 5.93H3a1 1 0 100 2h1.07a7.002 7.002 0 005.93 5.93V20a1 1 0 102 0v-1.07a7.002 7.002 0 005.93-5.93H21a1 1 0 100-2zm-9 5a5 5 0 110-10 5 5 0 010 10z"/>
     </svg>
   </div>
 
+  <!-- 배송 카드 리스트 -->
+  <div id="delivery-list">
+    <div id="result-info">📍 GPS 활성화 후 AI 경로 최적화 순서 자동 정렬 중...</div>
+    <div id="card-container"></div>
+  </div>
+
+  <!-- Kakao Map SDK -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
     const deliveryPoints = [
-      { name: "서울 시청", lat: 37.5665, lng: 126.9780 },
-      { name: "강남역", lat: 37.4979, lng: 127.0276 },
-      { name: "송파구청", lat: 37.5145, lng: 127.1059 },
-      { name: "구로디지털단지", lat: 37.4843, lng: 126.9011 }
+      { waybill: "A001", name: "김철수", phone: "010-1234-5678", address: "서울특별시 중구 세종대로 110", lat: 37.5665, lng: 126.9780 },
+      { waybill: "A002", name: "이영희", phone: "010-2345-6789", address: "서울특별시 강남구 테헤란로 201", lat: 37.4979, lng: 127.0276 },
+      { waybill: "A003", name: "박민수", phone: "010-3456-7890", address: "서울특별시 송파구 올림픽로 326", lat: 37.5145, lng: 127.1059 },
+      { waybill: "A004", name: "정하늘", phone: "010-4567-8901", address: "서울특별시 구로구 디지털로 32", lat: 37.4843, lng: 126.9011 },
+      { waybill: "A005", name: "홍길동", phone: "010-6789-0123", address: "서울특별시 서초구 서초대로 74길", lat: 37.4949, lng: 127.0145 },
+      { waybill: "A006", name: "최은지", phone: "010-9876-5432", address: "서울특별시 마포구 월드컵북로 400", lat: 37.5690, lng: 126.9017 }
     ];
 
     let map, gpsWatchId = null, userCircle = null;
@@ -98,24 +148,35 @@
       const R = 6371; // km
       const dLat = (lat2 - lat1) * Math.PI / 180;
       const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
       return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function renderCards(list) {
+      const container = document.getElementById("card-container");
+      container.innerHTML = "";
+      list.forEach((p, idx) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="top">
+            <strong>${idx + 1}️⃣ ${p.name}</strong>
+            <button onclick="alert('고객에게 전화 연결: ${p.phone}')">📞 전화</button>
+          </div>
+          <div><b>운송장:</b> ${p.waybill}</div>
+          <div><b>주소:</b> ${p.address}</div>
+          <div><b>거리:</b> ${p.distance ? p.distance.toFixed(2) + " km" : "-"}</div>
+        `;
+        container.appendChild(card);
+      });
     }
 
     window.onload = function() {
       const mapContainer = document.getElementById("map");
-      const mapOption = {
-        center: new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 7
-      };
+      const mapOption = { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 7 };
       map = new kakao.maps.Map(mapContainer, mapOption);
-      const bounds = new kakao.maps.LatLngBounds();
 
-      // 배송지 마커
+      const bounds = new kakao.maps.LatLngBounds();
       deliveryPoints.forEach(p => {
         const pos = new kakao.maps.LatLng(p.lat, p.lng);
         new kakao.maps.Marker({ map, position: pos });
@@ -124,18 +185,17 @@
       map.setBounds(bounds);
 
       const gpsBtn = document.getElementById("gps-toggle");
-      const resultBox = document.getElementById("resultBox");
+      const info = document.getElementById("result-info");
+      renderCards(deliveryPoints); // 초기 표시
 
       gpsBtn.addEventListener("click", () => {
         if (gpsBtn.classList.contains("active")) {
-          // GPS OFF
           gpsBtn.classList.remove("active");
           if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
           if (userCircle) userCircle.setMap(null);
           userCircle = null;
-          resultBox.innerHTML = "📍 GPS 중지됨.";
+          info.textContent = "📍 GPS 중지됨";
         } else {
-          // GPS ON
           gpsBtn.classList.add("active");
           if (navigator.geolocation) {
             gpsWatchId = navigator.geolocation.watchPosition((pos) => {
@@ -143,7 +203,6 @@
               const myLng = pos.coords.longitude;
               const loc = new kakao.maps.LatLng(myLat, myLng);
 
-              // 내 위치 점
               if (!userCircle) {
                 userCircle = new kakao.maps.Circle({
                   center: loc,
@@ -157,26 +216,17 @@
                 userCircle.setPosition(loc);
               }
 
-              // 지도 중심 이동
               map.setCenter(loc);
 
-              // 거리 계산
-              const distances = deliveryPoints.map(p => {
-                const d = calculateDistance(myLat, myLng, p.lat, p.lng);
-                return { ...p, distance: d };
-              });
+              const sorted = deliveryPoints.map(p => ({
+                ...p,
+                distance: calculateDistance(myLat, myLng, p.lat, p.lng)
+              })).sort((a, b) => a.distance - b.distance);
 
-              // 가까운 순서 정렬
-              distances.sort((a, b) => a.distance - b.distance);
-
-              // 상자에 표시
-              let html = "🚛 가까운 순서<br>";
-              distances.forEach((p, i) => {
-                html += `${i + 1}. ${p.name} (${p.distance.toFixed(2)} km)<br>`;
-              });
-              resultBox.innerHTML = html;
+              info.textContent = "🚛 가까운 순서로 자동 정렬 중...";
+              renderCards(sorted);
             }, () => {
-              alert("GPS 위치를 가져올 수 없습니다. 권한을 확인해주세요.");
+              alert("GPS 권한을 확인해주세요.");
             }, { enableHighAccuracy: true });
           } else {
             alert("이 기기는 GPS를 지원하지 않습니다.");
