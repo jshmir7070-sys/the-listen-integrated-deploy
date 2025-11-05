@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚚 The Listen - 배송경로 지도</title>
+  <title>🚚 The Listen - AI·GPS 배송경로 지도</title>
   <style>
     body {
       margin: 0;
@@ -22,39 +22,79 @@
       width: 100%;
       height: calc(100vh - 70px);
     }
+    .label {
+      background: white;
+      border: 1px solid #333;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <header>🚛 The Listen 배송경로 지도</header>
+  <header>🚛 The Listen AI·GPS 배송경로 지도</header>
   <div id="map"></div>
 
   <!-- ✅ Kakao Map SDK -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
+    // 예시 배송지 데이터 (테스트용)
+    const deliveryPoints = [
+      { name: "서울 시청", lat: 37.5665, lng: 126.9780 },
+      { name: "강남역", lat: 37.4979, lng: 127.0276 },
+      { name: "송파구청", lat: 37.5145, lng: 127.1059 },
+      { name: "구로디지털단지", lat: 37.4843, lng: 126.9011 }
+    ];
+
     window.onload = function() {
       const mapContainer = document.getElementById("map");
       const mapOption = {
-        center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청 중심 좌표
-        level: 7 // 확대 단계 (1:가깝게 ~ 14:멀리)
+        center: new kakao.maps.LatLng(37.5665, 126.9780),
+        level: 7
       };
 
       // 지도 생성
       const map = new kakao.maps.Map(mapContainer, mapOption);
 
-      // 중앙 마커 추가
-      const marker = new kakao.maps.Marker({
-        position: map.getCenter()
-      });
-      marker.setMap(map);
+      // 마커 및 경로 좌표 저장
+      const linePath = [];
+      const bounds = new kakao.maps.LatLngBounds();
 
-      // 정보창 (마커 클릭 시)
-      const infowindow = new kakao.maps.InfoWindow({
-        content: '<div style="padding:5px;font-size:13px;">🚚 The Listen<br>AI-GPS 배송경로 시스템</div>'
+      deliveryPoints.forEach((point, idx) => {
+        const position = new kakao.maps.LatLng(point.lat, point.lng);
+
+        // 마커 생성
+        const marker = new kakao.maps.Marker({
+          map: map,
+          position: position
+        });
+
+        // 라벨 추가
+        const overlay = new kakao.maps.CustomOverlay({
+          position: position,
+          content: `<div class="label">${idx + 1}. ${point.name}</div>`,
+          yAnchor: 2
+        });
+        overlay.setMap(map);
+
+        linePath.push(position);
+        bounds.extend(position);
       });
 
-      kakao.maps.event.addListener(marker, 'click', function() {
-        infowindow.open(map, marker);
+      // 경로 폴리라인 표시
+      const polyline = new kakao.maps.Polyline({
+        path: linePath,
+        strokeWeight: 4,
+        strokeColor: "#007bff",
+        strokeOpacity: 0.8,
+        strokeStyle: "solid"
       });
+      polyline.setMap(map);
+
+      // 지도 범위 자동조정
+      map.setBounds(bounds);
+
+      console.log("✅ 배송 경로 지도 로드 완료!");
     };
   </script>
 </body>
