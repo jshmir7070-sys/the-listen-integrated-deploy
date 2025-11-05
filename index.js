@@ -1,14 +1,16 @@
-import express from "express";
+// 🚀 The Listen Cloudtype 서버 구동 코드
+const express = require('express');
 const app = express();
 
-app.get("/", (req, res) => {
-  res.send(`
-    <h2>🚀 The Listen Cloudtype 서버 정상 실행 중</h2>
-    <p>Kakao / Supabase 키 정상 등록됨</p>
-  `);
+// Cloudtype이 자동으로 할당하는 포트 사용 (없으면 3000번)
+const PORT = process.env.PORT || 3000;
+
+// 기본 페이지 테스트용
+app.get('/', (req, res) => {
+  res.send('✅ The Listen Cloudtype Node.js 서버가 정상 작동 중입니다!');
 });
 
-const PORT = process.env.PORT || 8081;
+// 서버 실행
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });
