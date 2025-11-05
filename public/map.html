@@ -1,255 +1,182 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Listen - AI 배송경로 (네비 연동 포함 최종)</title>
-  <!-- 카카오 지도 SDK (서비스 라이브러리 포함) -->
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
-  <style>
-    body { margin:0; font-family:"Noto Sans KR",sans-serif; background:#f5f7fa; }
-    header { background:#007bff; color:#fff; text-align:center; padding:12px; font-weight:600; font-size:1.1rem; }
-    #map { width:100%; height:90vh; }
-
-    /* 하단 고객 카드 */
-    #customerCard{
-      position:fixed; left:0; bottom:0; width:100%;
-      background:#fff; border-top-left-radius:16px; border-top-right-radius:16px;
-      box-shadow:0 -6px 20px rgba(0,0,0,.25);
-      transform:translateY(100%); transition:transform .35s ease;
-      max-height:60vh; overflow-y:auto; z-index:9999;
-    }
-    #customerCard.active{ transform:translateY(0); }
-    .card-header{ padding:12px 16px; font-weight:700; text-align:center; }
-    .delivery-item{ padding:12px 18px; border-top:1px solid #f0f0f0; font-size:.95rem; }
-    .delivery-item p{ margin:4px 0; }
-    .btn-row{ display:flex; gap:8px; margin-top:10px; justify-content:center; flex-wrap:wrap; }
-    .btn{
-      border:none; border-radius:10px; padding:10px 14px; cursor:pointer; font-weight:600;
-      background:#007bff; color:#fff;
-    }
-    .btn.gray{ background:#6c757d; }
-    .btn.green{ background:#22c55e; }
-    .tag{ display:inline-block; padding:2px 8px; border-radius:999px; background:#eef4ff; color:#3563ff; font-size:.8rem; margin-left:6px; }
-
-    /* 내 위치 파란 점 */
-    .my-location-dot{
-      width:12px; height:12px; background:rgba(0,123,255,.95);
-      border-radius:50%; border:2px solid #fff;
-    }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>현재 지도보기 - The Listen</title>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
+<style>
+  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
+  header{background:#007bff;color:#fff;text-align:center;padding:10px;font-weight:700}
+  #map{width:100%;height:90vh}
+  #customerCard{
+    position:fixed;left:0;bottom:0;width:100%;background:#fff;border-top-left-radius:16px;border-top-right-radius:16px;
+    box-shadow:0 -6px 20px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .35s ease;max-height:60vh;overflow-y:auto;z-index:9999;
+  }
+  #customerCard.active{transform:translateY(0)}
+  .card-header{text-align:center;padding:12px;font-weight:900}
+  .delivery-item{padding:12px 18px;border-top:1px solid #eee}
+  .btn-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+  .btn{border:none;border-radius:10px;padding:10px 14px;color:#fff;background:#007bff;cursor:pointer;font-weight:700}
+  .btn.gray{background:#6b7280}
+  .tag{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#eef4ff;color:#3563ff;font-size:.8rem}
+  .my-location-dot{width:12px;height:12px;background:rgba(0,123,255,.95);border-radius:50%;border:2px solid #fff}
+</style>
 </head>
 <body>
-  <header>🚚 The Listen · AI 경로 · 200건 · 카카오네비 연동</header>
-  <div id="map"></div>
+<header>현재 지도보기 (실주소/고객카드/사진전송/네비 연동)</header>
+<div id="map"></div>
 
-  <!-- 고객 카드 -->
-  <div id="customerCard">
-    <div class="card-header">고객 상세 정보</div>
-    <div id="card-content"></div>
-  </div>
+<div id="customerCard">
+  <div class="card-header">고객 상세 정보</div>
+  <div id="card-content"></div>
+</div>
 
-  <script>
-    /* =========================
-       0) 공통/전역
-    ==========================*/
-    const map = new kakao.maps.Map(document.getElementById("map"), {
-      center: new kakao.maps.LatLng(37.4979, 127.0276),
-      level: 5
-    });
-    const geocoder = new kakao.maps.services.Geocoder();
+<script>
+const map = new kakao.maps.Map(document.getElementById("map"), {
+  center:new kakao.maps.LatLng(37.4979,127.0276), level:5
+});
+const geocoder = new kakao.maps.services.Geocoder();
+let myPosition=null;
+const markerById={};
+let resolvedList=[];
+let markersDrawn=false;
 
-    let myPosition = null;           // 현재 위치 kakao.maps.LatLng
-    const markerById = {};           // { [waybillId]: CustomOverlay }
-    let resolvedList = [];           // 지오코딩 완료된 배송지 배열
-    let markersDrawn = false;        // 중복 드로잉 방지
+// 내 위치(파란 점)
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition(pos=>{
+    myPosition=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
+    if(!window.myCircle){
+      window.myCircle=new kakao.maps.CustomOverlay({position:myPosition,content:'<div class="my-location-dot"></div>',map});
+    }else{ window.myCircle.setPosition(myPosition); }
+    if(resolvedList.length>0 && !markersDrawn) drawMarkersSorted();
+  },err=>console.warn('GPS:',err),{enableHighAccuracy:true});
+}
 
-    /* =========================
-       1) 내 위치 (실시간)
-    ==========================*/
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        (pos) => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          myPosition = new kakao.maps.LatLng(lat, lng);
+// 아파트 단지 + 일반 주소 혼합(실존 도로명) — 다가구 테스트 포함
+const aptBase = "서울특별시 송파구 올림픽로 300";
+const deliveriesRaw = [
+  // 아파트 단지 같은 좌표(동/호수 다른 고객들) — 한 위치에 여러 집
+  {id:"A101-01", name:"김아파트", phone:"010-1111-2222", address:`${aptBase} (101동 1201호)`, boxes:2},
+  {id:"A101-02", name:"이아파트", phone:"010-2222-3333", address:`${aptBase} (101동 605호)`, boxes:1},
+  {id:"A102-01", name:"박아파트", phone:"010-3333-4444", address:`${aptBase} (102동 801호)`, boxes:3},
+  // 일반 분산 주소
+  {id:"DLV001", name:"고객1", phone:"010-1000-2000", address:"서울특별시 강남구 테헤란로 231", boxes:1},
+  {id:"DLV002", name:"고객2", phone:"010-1001-2001", address:"서울특별시 서초구 반포대로 222", boxes:1},
+  {id:"DLV003", name:"고객3", phone:"010-1002-2002", address:"서울특별시 영등포구 여의나루로 76", boxes:2},
+];
+// 나머지는 목록을 늘려 1~200 충족(데모)
+const baseAddrs = [
+  "서울특별시 강남구 테헤란로 231","서울특별시 마포구 월드컵북로 400","서울특별시 성동구 왕십리로 115",
+  "서울특별시 노원구 동일로 900","서울특별시 종로구 종로 33","서울특별시 중구 세종대로 110","서울특별시 강동구 천호대로 1000"
+];
+while(deliveriesRaw.length<200){
+  const i = deliveriesRaw.length+1;
+  deliveriesRaw.push({
+    id:`DLV${String(i).padStart(3,'0')}`, name:`고객${i}`,
+    phone:`010-${(1000+i).toString().slice(-4)}-${(2000+i).toString().slice(-4)}`,
+    address: baseAddrs[i % baseAddrs.length], boxes: (i%3)+1
+  });
+}
 
-          if (!window.myCircle) {
-            window.myCircle = new kakao.maps.CustomOverlay({
-              position: myPosition,
-              content: '<div class="my-location-dot"></div>',
-              map
-            });
-          } else {
-            window.myCircle.setPosition(myPosition);
-          }
+// 거리 계산(Haversine)
+function distKm(a,b,c,d){
+  const R=6371, dLat=(c-a)*Math.PI/180, dLng=(d-b)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
 
-          // 첫 GPS 확보 후 한 번만 마커 정렬 갱신
-          if (resolvedList.length > 0 && !markersDrawn) {
-            drawMarkersSorted();
-          }
-        },
-        (err) => console.warn("GPS 비활성화 또는 권한 거부:", err),
-        { enableHighAccuracy: true }
-      );
+// 주소→좌표
+let geocodeDone=0;
+deliveriesRaw.forEach(d=>{
+  geocoder.addressSearch(d.address,(res,status)=>{
+    geocodeDone++;
+    if(status===kakao.maps.services.Status.OK && res[0]){
+      d.lat=Number(res[0].y); d.lng=Number(res[0].x);
+      resolvedList.push(d);
     }
+    if(geocodeDone===deliveriesRaw.length) drawMarkersSorted();
+  });
+});
 
-    /* =========================
-       2) 실제 '유효' 서울 주소 10개 × 20회 = 200건
-          (맵-주소 100% 일치, 테스트용)
-    ==========================*/
-    const baseAddrs = [
-      "서울특별시 강남구 테헤란로 231",
-      "서울특별시 송파구 올림픽로 300",
-      "서울특별시 마포구 월드컵북로 400",
-      "서울특별시 서초구 반포대로 222",
-      "서울특별시 강동구 천호대로 1000",
-      "서울특별시 영등포구 여의나루로 76",
-      "서울특별시 성동구 왕십리로 115",
-      "서울특별시 노원구 동일로 900",
-      "서울특별시 종로구 종로 33",
-      "서울특별시 중구 세종대로 110"
-    ];
+function drawMarkersSorted(){
+  if(markersDrawn || resolvedList.length===0) return;
+  let list=[...resolvedList];
+  if(myPosition){
+    const myLat=myPosition.getLat(), myLng=myPosition.getLng();
+    list.sort((a,b)=>distKm(myLat,myLng,a.lat,a.lng)-distKm(myLat,myLng,b.lat,b.lng));
+  }
+  list.forEach((d,idx)=>placeMarker(d,idx+1));
+  markersDrawn=true;
+  // 총 건수 저장 → 대시보드 표시용
+  localStorage.setItem('totalDeliveries', String(list.length));
+}
 
-    const deliveries = Array.from({ length: 200 }).map((_, i) => ({
-      id: `DLV${String(i+1).padStart(3,"0")}`,     // 운송장
-      name: `고객${i+1}`,
-      phone: `010-${(1000+i).toString().slice(-4)}-${(2000+i).toString().slice(-4)}`,
-      address: baseAddrs[i % baseAddrs.length],
-      boxes: (i % 3) + 1, // 1~3
-      lat: null,
-      lng: null
-    }));
+function placeMarker(d, order){
+  const el=document.createElement('div');
+  el.style.cssText=`
+    background:#007bff;color:#fff;border-radius:50%;width:30px;height:30px;
+    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;
+    border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
+  el.textContent=order;
+  const overlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(d.lat,d.lng),content:el,map});
+  markerById[d.id]=overlay;
+  el.addEventListener('click',()=>openCard(d,order));
+}
 
-    /* =========================
-       3) 거리(Haversine)
-    ==========================*/
-    function distKm(lat1,lng1,lat2,lng2){
-      const R=6371;
-      const dLat=(lat2-lat1)*Math.PI/180;
-      const dLng=(lng2-lng1)*Math.PI/180;
-      const a=Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    }
+function openCard(d, order){
+  const card=document.getElementById('customerCard'), box=document.getElementById('card-content');
+  // 동일 주소 다가구(동·호) 묶음 표시: 같은 address(괄호 앞 부분)가 같은 단지로 가정
+  const base = d.address.split(' (')[0];
+  const group = resolvedList.filter(x=>x.address.startsWith(base));
+  const header = `<div class="delivery-item" style="text-align:center;">
+    <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 <span class="tag">묶음 ${group.length}세대</span></div>
+    <p><b>단지 주소</b> : ${base}</p>
+    <div class="btn-row">
+      <button class="btn" onclick="startNavi(${d.lat},${d.lng}, '${encodeURIComponent(base)}')">🚘 카카오네비</button>
+      <button class="btn gray" onclick="closeCard()">닫기</button>
+    </div>
+  </div>`;
 
-    /* =========================
-       4) 주소→좌표(비동기) → 모두 끝나면 정렬/드로우
-    ==========================*/
-    let geocodeDone = 0;
-    deliveries.forEach(d => {
-      geocoder.addressSearch(d.address, (res, status) => {
-        geocodeDone++;
-        if (status === kakao.maps.services.Status.OK && res && res[0]) {
-          d.lat = Number(res[0].y);
-          d.lng = Number(res[0].x);
-          resolvedList.push(d);
-        }
-        // 전부 처리되면 그때 정렬 및 마커 표시
-        if (geocodeDone === deliveries.length) {
-          drawMarkersSorted();
-        }
-      });
-    });
+  const listHtml = group.map(g=>`
+    <div class="delivery-item">
+      <p><b>고객</b> ${g.name} &nbsp; <b>운송장</b> ${g.id} &nbsp; <span class="tag">박스 ${g.boxes}개</span></p>
+      <p><b>상세주소</b> : ${g.address}</p>
+      <p><b>전화</b> : ${g.phone}</p>
+      <div class="btn-row">
+        <button class="btn" onclick="capturePhoto('${g.id}','${g.address.replaceAll("'","")}')">📸 사진 촬영·전송</button>
+      </div>
+    </div>`).join('');
 
-    /* =========================
-       5) GPS 기준 정렬 → 순번 마커 생성
-    ==========================*/
-    function drawMarkersSorted(){
-      if (markersDrawn) return;
-      if (resolvedList.length === 0) return;
+  box.innerHTML = header + listHtml;
+  card.classList.add('active');
+}
 
-      const list = [...resolvedList];
-      // GPS 없으면 원본 순서, 있으면 거리 정렬
-      if (myPosition) {
-        const myLat = myPosition.getLat();
-        const myLng = myPosition.getLng();
-        list.sort((a,b) => distKm(myLat,myLng,a.lat,a.lng) - distKm(myLat,myLng,b.lat,b.lng));
-      }
+function closeCard(){ document.getElementById('customerCard').classList.remove('active'); }
 
-      list.forEach((d, idx) => placeMarker(d, idx+1));
-      markersDrawn = true;
-    }
+function capturePhoto(id,address){
+  const input=document.createElement('input');
+  input.type='file'; input.accept='image/*'; input.capture='environment';
+  input.onchange=(e)=>{
+    const f=e.target.files && e.target.files[0]; if(!f) return;
+    alert(`📸 전송 완료\n· 주소: ${address}\n· 운송장: ${id}`);
+    // 완료 저장(당일)
+    const today = new Date().toISOString().slice(0,10);
+    const completed = JSON.parse(localStorage.getItem('completed')||'[]');
+    completed.push({id,address,date:today,photo:true});
+    localStorage.setItem('completed', JSON.stringify(completed));
+    // 마커 반투명 처리
+    const mk=markerById[id]; if(mk) mk.getContent().style.opacity='0.4';
+  };
+  input.click();
+}
 
-    function placeMarker(d, order){
-      const el = document.createElement("div");
-      el.style.cssText = `
-        background:#007bff; color:#fff; border-radius:50%;
-        width:30px; height:30px; display:flex; align-items:center; justify-content:center;
-        font-weight:700; font-size:13px; border:2px solid #fff; box-shadow:0 2px 6px rgba(0,0,0,.3);
-        cursor:pointer;
-      `;
-      el.textContent = order;
+function startNavi(lat,lng,encodedName){
+  location.href = `https://map.kakao.com/link/to/${encodedName},${lat},${lng}`;
+}
 
-      const overlay = new kakao.maps.CustomOverlay({
-        position: new kakao.maps.LatLng(d.lat, d.lng),
-        content: el,
-        map
-      });
-      markerById[d.id] = overlay;
-
-      // 🔵 마커 클릭 → 고객카드 열기
-      el.addEventListener("click", () => openCustomerCard(d, order));
-    }
-
-    /* =========================
-       6) 고객 카드 (활성화, 닫기)
-    ==========================*/
-    function openCustomerCard(d, order){
-      const card = document.getElementById("customerCard");
-      const box = document.getElementById("card-content");
-      box.innerHTML = `
-        <div class="delivery-item" style="text-align:center;">
-          <div style="font-size:1.05rem; font-weight:700;">${order}️⃣ 순번 <span class="tag">박스 ${d.boxes}개</span></div>
-          <p><b>고객명</b> : ${d.name}</p>
-          <p><b>전화번호</b> : ${d.phone}</p>
-          <p><b>상세주소</b> : ${d.address}</p>
-          <p><b>운송장번호</b> : ${d.id}</p>
-          <div class="btn-row">
-            <button class="btn green" onclick="startKakaoNavi(${d.lat},${d.lng}, '${encodeURIComponent(d.address)}')">🚘 카카오네비 시작</button>
-            <button class="btn" onclick="capturePhoto('${d.id}','${d.address}')">📸 사진 촬영·전송</button>
-            <button class="btn gray" onclick="closeCard()">닫기</button>
-          </div>
-        </div>
-      `;
-      card.classList.add("active");
-    }
-    function closeCard(){ document.getElementById("customerCard").classList.remove("active"); }
-
-    /* =========================
-       7) 사진 촬영/전송 → 마커 반투명 처리
-    ==========================*/
-    function capturePhoto(id, address){
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.capture = "environment"; // 후면카메라 우선
-      input.onchange = (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        alert(`📸 사진 전송 완료\n· 주소: ${address}\n· 운송장: ${id}`);
-        const mk = markerById[id];
-        if (mk) { mk.getContent().style.opacity = "0.4"; } // 완료 표시
-        closeCard();
-      };
-      input.click();
-    }
-
-    /* =========================
-       8) 카카오네비/지도 길안내 연동 (모바일)
-          - 카카오맵 앱이 있으면 앱으로,
-            없으면 웹지도 길찾기 열리도록 링크 사용
-    ==========================*/
-    function startKakaoNavi(lat, lng, encodedName){
-      // 1) 카카오맵 길찾기 링크 (앱/웹 자동 연결)
-      //    https://map.kakao.com/link/to/장소명,위도,경도
-      const url = `https://map.kakao.com/link/to/${encodedName},${lat},${lng}`;
-      window.location.href = url;
-    }
-
-    // 전역 바인딩
-    window.capturePhoto = capturePhoto;
-    window.closeCard = closeCard;
-    window.startKakaoNavi = startKakaoNavi;
-  </script>
+window.closeCard=closeCard;
+window.capturePhoto=capturePhoto;
+window.startNavi=startNavi;
+</script>
 </body>
 </html>
