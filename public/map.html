@@ -30,17 +30,17 @@
       top: 60px;
       left: 0;
     }
-    /* ✅ GPS 버튼 */
+    /* GPS 버튼 (오른쪽 하단 원형 토글) */
     #gps-toggle {
       position: absolute;
       bottom: 20px;
       right: 20px;
-      width: 52px;
-      height: 52px;
+      width: 54px;
+      height: 54px;
       border-radius: 50%;
       background-color: white;
       border: 2px solid #007bff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -83,7 +83,7 @@
       { lat: 37.4843, lng: 126.9011 }
     ];
 
-    let map, gpsWatchId = null, userMarker = null;
+    let map, gpsWatchId = null, userCircle = null;
 
     window.onload = function() {
       const mapContainer = document.getElementById("map");
@@ -93,7 +93,7 @@
       };
       map = new kakao.maps.Map(mapContainer, mapOption);
 
-      // 배송지 마커 표시
+      // 기본 배송지 마커
       const bounds = new kakao.maps.LatLngBounds();
       deliveryPoints.forEach((p) => {
         const pos = new kakao.maps.LatLng(p.lat, p.lng);
@@ -102,17 +102,17 @@
       });
       map.setBounds(bounds);
 
-      // GPS 버튼 동작
+      // GPS 버튼
       const gpsBtn = document.getElementById("gps-toggle");
       gpsBtn.addEventListener("click", () => {
         if (gpsBtn.classList.contains("active")) {
-          // GPS 끄기
+          // 🔴 GPS 끄기
           gpsBtn.classList.remove("active");
           if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
-          if (userMarker) userMarker.setMap(null);
-          userMarker = null;
+          if (userCircle) userCircle.setMap(null);
+          userCircle = null;
         } else {
-          // GPS 켜기
+          // 🔵 GPS 켜기
           gpsBtn.classList.add("active");
           if (navigator.geolocation) {
             gpsWatchId = navigator.geolocation.watchPosition((pos) => {
@@ -120,27 +120,24 @@
               const lng = pos.coords.longitude;
               const loc = new kakao.maps.LatLng(lat, lng);
 
-              // 파란 점 마커 (내 위치)
-              const markerImage = new kakao.maps.MarkerImage(
-                "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/blue_dot.png",
-                new kakao.maps.Size(16, 16),
-                { offset: new kakao.maps.Point(8, 8) }
-              );
-
-              if (!userMarker) {
-                userMarker = new kakao.maps.Marker({
-                  map,
-                  position: loc,
-                  image: markerImage
+              // 🔵 파란색 원형 점 (내 위치)
+              if (!userCircle) {
+                userCircle = new kakao.maps.Circle({
+                  center: loc,
+                  radius: 8, // 점 크기
+                  strokeWeight: 0,
+                  fillColor: "#1E90FF",
+                  fillOpacity: 1
                 });
+                userCircle.setMap(map);
               } else {
-                userMarker.setPosition(loc);
+                userCircle.setPosition(loc);
               }
 
-              // 지도 중심 내 위치로 이동
+              // 지도 중심 이동
               map.setCenter(loc);
             }, () => {
-              alert("GPS 위치를 가져올 수 없습니다. 권한을 확인해주세요.");
+              alert("GPS 위치를 가져올 수 없습니다. 권한을 허용해주세요.");
             }, { enableHighAccuracy: true });
           } else {
             alert("이 기기는 GPS를 지원하지 않습니다.");
