@@ -2,199 +2,189 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-  <title>🚚 The Listen - 실시간 배송 지도 (v3)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Listen - 배송경로 지도</title>
+  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      width: 100%; height: 100%;
-      overflow: hidden;
-      font-family: 'Noto Sans KR', sans-serif;
-      background: #f4f7fb;
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", sans-serif;
     }
-
-    #map { width: 100%; height: 100%; position: relative; }
-
-    /* 📱 고객 카드 패널 */
-    #customer-panel {
-      position: absolute;
-      bottom: -100%;
+    header {
+      background: #007bff;
+      color: white;
+      text-align: center;
+      padding: 12px;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    #map {
+      width: 100%;
+      height: 90vh;
+    }
+    /* 고객카드 하단 슬라이드 UI */
+    #customerCard {
+      position: fixed;
+      bottom: 0;
       left: 0;
       width: 100%;
-      height: 45%;
-      background: white;
+      background: #fff;
       border-top-left-radius: 16px;
       border-top-right-radius: 16px;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.25);
-      transition: bottom 0.4s ease;
-      padding: 10px;
+      box-shadow: 0 -2px 15px rgba(0,0,0,0.2);
+      max-height: 65vh;
       overflow-y: auto;
-      z-index: 100;
+      transform: translateY(100%);
+      transition: transform 0.4s ease;
+      z-index: 9999;
     }
-
-    #customer-panel.active {
-      bottom: 0;
+    #customerCard.active {
+      transform: translateY(0);
     }
-
-    .address-header {
+    .card-header {
+      text-align: center;
       font-weight: 700;
-      color: #007bff;
-      font-size: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      padding: 10px;
+      color: #333;
+    }
+    .delivery-item {
+      padding: 10px 15px;
       border-bottom: 1px solid #eee;
-      padding-bottom: 6px;
-      margin-bottom: 6px;
     }
-
-    .customer-card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 8px;
-      margin-bottom: 8px;
-      font-size: 13px;
-      background: #fff;
-      transition: 0.2s;
+    .delivery-item button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
     }
-
-    .customer-card:hover { background: #f0f8ff; }
-    .customer-card.done { background: #e0f9e1; border-color: #28a745; }
-
-    .customer-card strong { color: #007bff; }
-    .photo-preview {
-      margin-top: 6px; max-width: 100%; border-radius: 8px; display: none;
-    }
-
     .close-btn {
-      position: absolute;
-      right: 12px; top: 8px;
-      font-size: 20px; cursor: pointer;
-      color: #666;
+      display: block;
+      margin: 10px auto;
+      padding: 8px 15px;
+      background: #ff4757;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    /* 내 위치 파란 원 */
+    .my-location-dot {
+      width: 12px;
+      height: 12px;
+      background: rgba(0,123,255,0.9);
+      border-radius: 50%;
+      border: 2px solid white;
     }
   </style>
 </head>
 <body>
+  <header>🚚 The Listen 배송경로 지도</header>
   <div id="map"></div>
 
-  <!-- 하단 슬라이드 UI -->
-  <div id="customer-panel">
-    <div class="close-btn" onclick="hidePanel()">✕</div>
-    <div id="panel-content"></div>
+  <!-- 고객카드 -->
+  <div id="customerCard">
+    <div class="card-header">고객 정보</div>
+    <div id="card-content"></div>
+    <button class="close-btn" onclick="closeCard()">닫기</button>
   </div>
 
-  <!-- Kakao Map -->
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
+    // ✅ 1. 지도 초기화
+    const mapContainer = document.getElementById("map");
+    const mapOption = {
+      center: new kakao.maps.LatLng(37.4981, 127.0276),
+      level: 5
+    };
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+
+    // ✅ 2. 내 위치 표시
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const loc = new kakao.maps.LatLng(lat, lng);
+
+          if (!window.myCircle) {
+            window.myCircle = new kakao.maps.CustomOverlay({
+              position: loc,
+              content: '<div class="my-location-dot"></div>',
+              map: map
+            });
+          } else {
+            window.myCircle.setPosition(loc);
+          }
+          map.setCenter(loc);
+        },
+        (err) => console.warn("GPS 권한 거부됨", err),
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // ✅ 3. 예시 배송지 데이터
     const deliveries = [
-      { name: "김철수", phone: "010-1111-2222", apt: "푸르지오", dong: "101동", detail: "302호", address: "서울 강남구 테헤란로 201", lat: 37.4979, lng: 127.0276 },
-      { name: "이영희", phone: "010-2222-3333", apt: "푸르지오", dong: "101동", detail: "401호", address: "서울 강남구 테헤란로 201", lat: 37.4979, lng: 127.0276 },
-      { name: "박민수", phone: "010-3333-4444", apt: "푸르지오", dong: "102동", detail: "602호", address: "서울 강남구 테헤란로 201", lat: 37.4984, lng: 127.0268 },
-      { name: "정하늘", phone: "010-4444-5555", apt: "래미안", dong: "201동", detail: "903호", address: "서울 송파구 올림픽로 326", lat: 37.5145, lng: 127.1059 },
-      { name: "홍길동", phone: "010-5555-6666", apt: "래미안", dong: "202동", detail: "304호", address: "서울 송파구 올림픽로 326", lat: 37.5150, lng: 127.1065 }
+      { id: "A001", name: "김지훈", phone: "010-1111-2222", address: "서울특별시 강남구 테헤란로 123 (101동 1502호)", lat: 37.4981, lng: 127.0276 },
+      { id: "A002", name: "박은지", phone: "010-3333-4444", address: "서울특별시 강남구 테헤란로 123 (101동 1502호)", lat: 37.4981, lng: 127.0276 },
+      { id: "A003", name: "최성민", phone: "010-5555-6666", address: "서울특별시 강남구 테헤란로 123 (101동 1503호)", lat: 37.4981, lng: 127.0276 },
+      { id: "A004", name: "이수빈", phone: "010-9999-8888", address: "서울특별시 송파구 올림픽로 456 (202동 302호)", lat: 37.5145, lng: 127.1056 },
     ];
 
-    const map = new kakao.maps.Map(document.getElementById("map"), {
-      center: new kakao.maps.LatLng(37.4979, 127.0276),
-      level: 6
-    });
+    // ✅ 4. 동일 주소 그룹화
+    const groupedDeliveries = deliveries.reduce((groups, d) => {
+      const key = d.address;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(d);
+      return groups;
+    }, {});
 
-    // 🏢 동별 그룹핑
-    const grouped = {};
-    deliveries.forEach(d => {
-      const key = `${d.apt}-${d.dong}`;
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(d);
-    });
-
-    const markers = {};
-
-    for (const key in grouped) {
-      const group = grouped[key];
-      const first = group[0];
-      const pos = new kakao.maps.LatLng(first.lat, first.lng);
+    // ✅ 5. 지도에 마커 표시
+    Object.keys(groupedDeliveries).forEach((key) => {
+      const group = groupedDeliveries[key];
+      const position = new kakao.maps.LatLng(group[0].lat, group[0].lng);
       const marker = new kakao.maps.Marker({
-        map,
-        position: pos,
-        title: `${first.apt} ${first.dong}`
+        position,
+        map
       });
 
-      markers[key] = { marker, group };
+      kakao.maps.event.addListener(marker, "click", () => {
+        showCustomerCard(group);
+      });
+    });
 
-      kakao.maps.event.addListener(marker, "click", () => showPanel(key));
-    }
+    // ✅ 6. 고객카드 UI 생성
+    function showCustomerCard(group) {
+      const card = document.getElementById("customerCard");
+      const content = document.getElementById("card-content");
+      const total = group.length;
 
-    function showPanel(groupKey) {
-      const panel = document.getElementById("customer-panel");
-      const content = document.getElementById("panel-content");
-      const data = grouped[groupKey];
-      if (!data || data.length === 0) return;
-
-      let html = `
-        <div class="address-header">
-          ${data[0].apt} ${data[0].dong}
-          <span id="remain-${groupKey}">📦 잔여 ${data.length}건</span>
-        </div>
+      content.innerHTML = `
+        <h3 style="text-align:center;">📦 ${group[0].address}</h3>
+        <p style="text-align:center;">총 배송 건수: <b>${total}</b>건</p>
+        <hr>
+        ${group.map((g, i) => `
+          <div class="delivery-item">
+            <p><b>${i + 1}. ${g.name}</b> (${g.phone})</p>
+            <p>${g.address}</p>
+            <button onclick="completeDelivery('${g.id}', '${g.address}')">📸 배송완료</button>
+          </div>
+        `).join("")}
       `;
 
-      data.forEach((cust, i) => {
-        html += `
-          <div class="customer-card" id="cust-${groupKey}-${i}">
-            <strong>${cust.name}</strong> (${cust.detail})<br>
-            <small>${cust.phone}</small><br>
-            <button onclick="openCamera('${groupKey}', ${i})">📸 배송완료</button>
-            <input type="file" id="file-${groupKey}-${i}" accept="image/*" capture="camera" style="display:none">
-            <img id="preview-${groupKey}-${i}" class="photo-preview">
-          </div>
-        `;
-      });
-
-      content.innerHTML = html;
-      panel.classList.add("active"); // 완전히 올라온 상태 유지
+      card.classList.add("active");
     }
 
-    function hidePanel() {
-      const panel = document.getElementById("customer-panel");
-      panel.classList.remove("active");
+    // ✅ 7. 배송 완료 기능
+    function completeDelivery(id, address) {
+      alert(`운송장 ${id} 배송 완료! (${address})`);
+      closeCard();
     }
 
-    function openCamera(groupKey, idx) {
-      const input = document.getElementById(`file-${groupKey}-${idx}`);
-      input.click();
-
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const preview = document.getElementById(`preview-${groupKey}-${idx}`);
-          const card = document.getElementById(`cust-${groupKey}-${idx}`);
-          preview.src = ev.target.result;
-          preview.style.display = "block";
-          card.classList.add("done");
-          card.querySelector("button").disabled = true;
-
-          // 그룹 내 고객 제거
-          grouped[groupKey].splice(idx, 1);
-
-          // 잔여 수 업데이트
-          const remain = document.getElementById(`remain-${groupKey}`);
-          remain.textContent = `📦 잔여 ${grouped[groupKey].length}건`;
-
-          alert(`✅ ${card.querySelector("strong").innerText} 배송완료!`);
-
-          // 모든 고객 완료 시 핀 삭제 및 슬라이드 닫기
-          if (grouped[groupKey].length === 0) {
-            markers[groupKey].marker.setMap(null);
-            hidePanel();
-          } else {
-            // 일부 남아 있으면 자동 닫기
-            hidePanel();
-          }
-        };
-        reader.readAsDataURL(file);
-      };
+    // ✅ 8. 닫기 버튼
+    function closeCard() {
+      document.getElementById("customerCard").classList.remove("active");
     }
   </script>
 </body>
