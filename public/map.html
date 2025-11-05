@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>🚚 The Listen - AI·GPS 배송지도</title>
+  <title>🚚 The Listen - AI·GPS 실시간 배송지도</title>
   <style>
     html, body {
       margin: 0;
@@ -21,12 +21,12 @@
       padding: 14px 0;
       font-size: 1.4rem;
       font-weight: 600;
-      position: relative;
       z-index: 10;
+      position: relative;
     }
     #map {
       width: 100%;
-      height: calc(100% - 60px); /* 헤더 제외 높이 */
+      height: calc(100% - 60px);
       position: absolute;
       top: 60px;
       left: 0;
@@ -39,10 +39,18 @@
       font-size: 12px;
       white-space: nowrap;
     }
+    .my-location {
+      background-color: #ff4d4d;
+      color: white;
+      border: 1px solid #333;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
-  <header>🚛 The Listen AI·GPS 배송지도</header>
+  <header>🚛 The Listen AI·GPS 실시간 배송지도</header>
   <div id="map"></div>
 
   <!-- ✅ Kakao Map SDK -->
@@ -55,26 +63,23 @@
       { name: "구로디지털단지", lat: 37.4843, lng: 126.9011 }
     ];
 
+    let map, bounds;
+
     window.onload = function() {
       const mapContainer = document.getElementById("map");
       const mapOption = {
         center: new kakao.maps.LatLng(37.5665, 126.9780),
         level: 7
       };
+      map = new kakao.maps.Map(mapContainer, mapOption);
+      bounds = new kakao.maps.LatLngBounds();
 
-      const map = new kakao.maps.Map(mapContainer, mapOption);
-      const bounds = new kakao.maps.LatLngBounds();
-
-      // 🔹 마커만 표시 (경로선 완전 제거)
+      // 배송지 마커 표시
       deliveryPoints.forEach((point, idx) => {
         const position = new kakao.maps.LatLng(point.lat, point.lng);
-        const marker = new kakao.maps.Marker({
-          map: map,
-          position: position
-        });
-
+        new kakao.maps.Marker({ map, position });
         const overlay = new kakao.maps.CustomOverlay({
-          position: position,
+          position,
           content: `<div class="label">${idx + 1}. ${point.name}</div>`,
           yAnchor: 2
         });
@@ -82,8 +87,40 @@
         bounds.extend(position);
       });
 
-      // 범위 자동조정
-      map.setBounds(bounds);
+      // 내 위치 불러오기
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((pos) => {
+          const myLat = pos.coords.latitude;
+          const myLng = pos.coords.longitude;
+          const myPos = new kakao.maps.LatLng(myLat, myLng);
+
+          const myMarker = new kakao.maps.Marker({
+            position: myPos,
+            map,
+            image: new kakao.maps.MarkerImage(
+              "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/red_b.png",
+              new kakao.maps.Size(64, 69),
+              { offset: new kakao.maps.Point(27, 69) }
+            )
+          });
+
+          const myOverlay = new kakao.maps.CustomOverlay({
+            position: myPos,
+            content: '<div class="my-location">📍 내 위치</div>',
+            yAnchor: 2
+          });
+          myOverlay.setMap(map);
+
+          bounds.extend(myPos);
+          map.setBounds(bounds);
+        }, () => {
+          alert("현재 위치를 불러올 수 없습니다. GPS 권한을 허용해주세요.");
+          map.setBounds(bounds);
+        });
+      } else {
+        alert("이 기기는 GPS를 지원하지 않습니다.");
+        map.setBounds(bounds);
+      }
     };
   </script>
 </body>
