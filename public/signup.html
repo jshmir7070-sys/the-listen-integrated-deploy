@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>The Listen - 로그인 (테스트용)</title>
+<title>The Listen - 로그인</title>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
   .wrap{max-width:420px;margin:64px auto;padding:20px}
   .logo{
-    font-size:46px;font-weight:900;text-align:center;
+    font-size:48px;font-weight:900;text-align:center;
     background:linear-gradient(90deg,#007bff,#00b4d8);
-    -webkit-background-clip:text;-webkit-text-fill-color:transparent; margin-bottom:10px;
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:10px;
   }
   .sub{color:#6b7280;text-align:center;margin-bottom:24px;font-size:15px}
   .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:24px}
@@ -20,7 +21,7 @@
   .btn{width:100%;background:#007bff;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer}
   .links{display:flex;justify-content:space-between;margin-top:14px;font-size:14px}
   .links a{color:#007bff;text-decoration:none;font-weight:700}
-  .hint{color:#64748b;margin-top:10px;font-size:13px}
+  .hint{color:#64748b;margin-top:10px;font-size:13px;text-align:center}
 </style>
 </head>
 <body>
@@ -54,34 +55,36 @@
   </div>
 
 <script>
+// ✅ 앱 로드 시 기본 계정 자동 생성 (모바일, Cloudtype 모두 작동)
 window.onload=function(){
   const savedId=localStorage.getItem('savedId');
   if(savedId){ loginId.value=savedId; saveId.checked=true; }
-};
 
-// 기본 테스트 계정 추가
-(function ensureTestUser(){
   const users = JSON.parse(localStorage.getItem('users')||'[]');
   if(!users.find(u=>u.id==='1234')){
-    users.push({id:'1234',pw:'1234',name:'테스트기사',phone:'010-0000-0000'});
+    users.push({id:'1234',pw:'1234',name:'테스트기사',phone:'010-0000-0000',address:'서울특별시 강남구 테스트로 123'});
     localStorage.setItem('users', JSON.stringify(users));
   }
-})();
+};
 
+// ✅ 로그인 함수
 function login(){
   const id=loginId.value.trim(), pw=loginPw.value.trim();
   if(!id||!pw){ alert('아이디와 비밀번호를 입력하세요.'); return; }
 
   const users = JSON.parse(localStorage.getItem('users')||'[]');
   const found = users.find(u=>u.id===id && u.pw===pw);
-  if(!found){ alert('아이디 또는 비밀번호가 올바르지 않습니다.'); return; }
+  if(!found){
+    alert('가입정보가 없거나 비밀번호가 틀렸습니다.\n(테스트용: 1234 / 1234)');
+    return;
+  }
 
   if(saveId.checked) localStorage.setItem('savedId', id);
   else localStorage.removeItem('savedId');
 
   localStorage.setItem('currentUser', JSON.stringify(found));
   alert(`✅ 환영합니다, ${found.name}님!`);
-  location.href='dashboard.html';
+  location.href='dashboard.html'; // 로그인 성공 후 페이지 이동
 }
 </script>
 </body>
