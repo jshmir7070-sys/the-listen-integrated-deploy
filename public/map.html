@@ -4,18 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Listen - 지도</title>
-<!-- Kakao SDK (네트워크/키 문제로 비활성화될 수 있어 안내도 포함) -->
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
   header{background:#007bff;color:#fff;text-align:center;padding:10px;font-weight:800}
   #map{width:100%;height:90vh;position:relative}
-  #customerCard{
-    position:fixed;left:0;bottom:0;width:100%;background:#fff;
-    border-top-left-radius:16px;border-top-right-radius:16px;
-    box-shadow:0 -6px 20px rgba(0,0,0,.25);
-    transform:translateY(100%);transition:transform .3s;z-index:9999;
-  }
+  #customerCard{position:fixed;left:0;bottom:0;width:100%;background:#fff;border-top-left-radius:16px;border-top-right-radius:16px;
+    box-shadow:0 -6px 20px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .3s;z-index:9999;}
   #customerCard.active{transform:translateY(0)}
   .delivery-item{padding:16px;text-align:center}
   .btn{border:none;border-radius:10px;padding:10px 14px;color:#fff;background:#007bff;cursor:pointer;font-weight:700;margin:4px}
@@ -51,34 +46,37 @@ function main(){
   const geocoder=new kakao.maps.services.Geocoder();
 
   // depart 연동
-  let deliveries=[]; try{ deliveries=JSON.parse(localStorage.getItem('deliveriesJSON')||'[]'); }catch{ deliveries=[]; }
+  let deliveries=[]; 
+  try{ deliveries=JSON.parse(localStorage.getItem('deliveriesJSON')||'[]'); }catch{ deliveries=[]; }
   if(!deliveries.length){
     deliveries=[{id:"TEST1",name:"테스트",phone:"010-0000-0000",address:"경기도 시흥시 수풀안길 19-30 101동 202호",boxes:1}];
   }
 
-  // GPS 표시
+  // GPS 위치 표시
   let myPos=null;
   if(navigator.geolocation){
     navigator.geolocation.watchPosition(p=>{
       myPos=new kakao.maps.LatLng(p.coords.latitude,p.coords.longitude);
-      if(!window.myCircle){ window.myCircle=new kakao.maps.CustomOverlay({position:myPos,content:'<div class="my-location-dot"></div>',map}); }
-      else window.myCircle.setPosition(myPos);
+      if(!window.myCircle){ 
+        window.myCircle=new kakao.maps.CustomOverlay({position:myPos,content:'<div class="my-location-dot"></div>',map}); 
+      } else window.myCircle.setPosition(myPos);
     },()=>{}, {enableHighAccuracy:true});
   }
 
   // 마커 생성
   const markerById={};
   const bounds=new kakao.maps.LatLngBounds();
-
-  // order 부여가 없다면 index 기반으로 보이게
   deliveries.forEach((d,i)=>{ if(d.order==null) d.order=i+1; });
 
   let done=0, need=deliveries.length;
   deliveries.forEach((d,i)=>{
-    if(d.lat && d.lng){ placeMarker(d); finish(); }
+    if(d.lat && d.lng){ placeMarker(d,i); finish(); }
     else{
       geocoder.addressSearch(d.address,(r,s)=>{
-        if(s===kakao.maps.services.Status.OK && r[0]){ d.lat=+r[0].y; d.lng=+r[0].x; placeMarker(d); }
+        if(s===kakao.maps.services.Status.OK && r[0]){ 
+          d.lat=+r[0].y; d.lng=+r[0].x; 
+          placeMarker(d,i); 
+        }
         finish();
       });
     }
@@ -86,22 +84,33 @@ function main(){
 
   function finish(){ done++; if(done>=need){ map.setBounds(bounds); } }
 
-  function placeMarker(d){
-    const dong=(d.address.match(/(\d+)동/)||[])[1]||"0";
+  // ✅ 추가 부분: 동일 주소 내 동별로 좌표 분리 (offset)
+  const offsetMap = {}; // 주소별 offset 누적
+  function placeMarker(d,i){
+    const baseKey = d.address.replace(/\d+동.*/,''); // "기본주소"만 추출
+    const dongMatch = d.address.match(/(\d+)동/);
+    const dong = dongMatch ? dongMatch[1] : "0";
     const color = dong.endsWith("1")?"#007bff" : dong.endsWith("3")?"#10b981" : dong.endsWith("5")?"#f59e0b" : "#6b7280";
+
+    // 동일 주소 내 마커가 겹치지 않게 미세 이동
+    if(!offsetMap[baseKey]) offsetMap[baseKey] = 0;
+    const offset = offsetMap[baseKey] * 0.00008; // 약 8m 간격
+    offsetMap[baseKey] += 1;
+    const lat = d.lat + offset;
+    const lng = d.lng + offset;
+
     const el=document.createElement('div');
     el.style.cssText=`background:${color};color:#fff;border-radius:50%;width:34px;height:34px;
       display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;border:2px solid #fff;cursor:pointer;`;
     el.textContent=d.order||'?';
 
     const ov=new kakao.maps.CustomOverlay({
-      position:new kakao.maps.LatLng(d.lat,d.lng),
+      position:new kakao.maps.LatLng(lat,lng),
       content:el,
       map
     });
     markerById[d.id]=ov;
-    bounds.extend(new kakao.maps.LatLng(d.lat,d.lng));
-
+    bounds.extend(new kakao.maps.LatLng(lat,lng));
     el.addEventListener('click',()=>openCard(d));
   }
 
@@ -122,9 +131,9 @@ function main(){
       </div>`;
     card.classList.add('active');
   }
+
   window.closeCard=()=>document.getElementById('customerCard').classList.remove('active');
 
-  // 사진 전송 → 마커 반투명
   window.photo=(id)=>{
     const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment';
     i.onchange=e=>{
@@ -132,7 +141,6 @@ function main(){
       alert('📸 전송 완료');
       const mk=markerById[id]; if(mk) mk.getContent().style.opacity='0.4';
       window.closeCard();
-      // 완료 기록(선택)
       const arr=JSON.parse(localStorage.getItem('completed')||'[]');
       arr.push({id,date:new Date().toISOString(),photo:true,address:deliveries.find(x=>x.id===id)?.address||''});
       localStorage.setItem('completed', JSON.stringify(arr));
@@ -140,13 +148,10 @@ function main(){
     i.click();
   };
 
-  // ✅ 카카오 네비: 앱 우선 → 실패 시 웹 폴백 (비활성화 환경 대비)
   window.startNavi=(lat,lng,name)=>{
     const appURL=`kakaomap://route?ep=${lat},${lng}&by=CAR`;
     const webURL=`https://map.kakao.com/link/to/${name},${lat},${lng}`;
-    // 앱 시도
     location.href=appURL;
-    // 1초 내 이동 실패 시 웹으로
     setTimeout(()=>{ location.href=webURL; }, 1000);
   };
 }
