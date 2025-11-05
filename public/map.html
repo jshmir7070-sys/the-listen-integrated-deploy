@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>🚚 The Listen - AI·GPS 실시간 배송지도</title>
+  <title>🚚 The Listen - 실시간 GPS 배송지도</title>
   <style>
     html, body {
       margin: 0;
@@ -12,7 +12,6 @@
       height: 100%;
       overflow: hidden;
       font-family: 'Noto Sans KR', sans-serif;
-      background-color: #f5f5f5;
     }
     header {
       background-color: #007bff;
@@ -21,8 +20,8 @@
       padding: 14px 0;
       font-size: 1.4rem;
       font-weight: 600;
-      position: relative;
       z-index: 10;
+      position: relative;
     }
     #map {
       width: 100%;
@@ -31,21 +30,60 @@
       top: 60px;
       left: 0;
     }
+    /* ✅ GPS 버튼 */
+    #gps-toggle {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background-color: white;
+      border: 2px solid #007bff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 20;
+      transition: 0.3s;
+    }
+    #gps-toggle.active {
+      background-color: #007bff;
+    }
+    #gps-toggle svg {
+      width: 26px;
+      height: 26px;
+      fill: #007bff;
+      transition: 0.3s;
+    }
+    #gps-toggle.active svg {
+      fill: white;
+    }
   </style>
 </head>
 <body>
   <header>🚛 The Listen AI·GPS 실시간 배송지도</header>
   <div id="map"></div>
 
+  <!-- 🧭 GPS 토글 버튼 -->
+  <div id="gps-toggle" title="GPS 위치 추적 토글">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 3h-1.07a7.002 7.002 0 00-5.93-5.93V4a1 1 0 10-2 0v1.07a7.002 7.002 0 00-5.93 5.93H3a1 1 0 100 2h1.07a7.002 7.002 0 005.93 5.93V20a1 1 0 102 0v-1.07a7.002 7.002 0 005.93-5.93H21a1 1 0 100-2zm-9 5a5 5 0 110-10 5 5 0 010 10z"/>
+    </svg>
+  </div>
+
   <!-- ✅ Kakao Map SDK -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
     const deliveryPoints = [
-      { lat: 37.5665, lng: 126.9780 }, // 서울 시청
-      { lat: 37.4979, lng: 127.0276 }, // 강남역
-      { lat: 37.5145, lng: 127.1059 }, // 송파구청
-      { lat: 37.4843, lng: 126.9011 }  // 구로디지털단지
+      { lat: 37.5665, lng: 126.9780 },
+      { lat: 37.4979, lng: 127.0276 },
+      { lat: 37.5145, lng: 127.1059 },
+      { lat: 37.4843, lng: 126.9011 }
     ];
+
+    let map, gpsWatchId = null, userMarker = null;
 
     window.onload = function() {
       const mapContainer = document.getElementById("map");
@@ -53,45 +91,62 @@
         center: new kakao.maps.LatLng(37.5665, 126.9780),
         level: 7
       };
-      const map = new kakao.maps.Map(mapContainer, mapOption);
+      map = new kakao.maps.Map(mapContainer, mapOption);
+
+      // 배송지 마커 표시
       const bounds = new kakao.maps.LatLngBounds();
-
-      // ✅ 배송지 마커 표시 (텍스트 제거)
-      deliveryPoints.forEach((point) => {
-        const position = new kakao.maps.LatLng(point.lat, point.lng);
-        new kakao.maps.Marker({ map, position });
-        bounds.extend(position);
+      deliveryPoints.forEach((p) => {
+        const pos = new kakao.maps.LatLng(p.lat, p.lng);
+        new kakao.maps.Marker({ map, position: pos });
+        bounds.extend(pos);
       });
+      map.setBounds(bounds);
 
-      // ✅ 내 위치 파란 점 표시
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition((pos) => {
-          const myLat = pos.coords.latitude;
-          const myLng = pos.coords.longitude;
-          const myPos = new kakao.maps.LatLng(myLat, myLng);
+      // GPS 버튼 동작
+      const gpsBtn = document.getElementById("gps-toggle");
+      gpsBtn.addEventListener("click", () => {
+        if (gpsBtn.classList.contains("active")) {
+          // GPS 끄기
+          gpsBtn.classList.remove("active");
+          if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+          if (userMarker) userMarker.setMap(null);
+          userMarker = null;
+        } else {
+          // GPS 켜기
+          gpsBtn.classList.add("active");
+          if (navigator.geolocation) {
+            gpsWatchId = navigator.geolocation.watchPosition((pos) => {
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              const loc = new kakao.maps.LatLng(lat, lng);
 
-          // 🔵 파란 점 표시
-          const circle = new kakao.maps.Circle({
-            center: myPos,
-            radius: 12,
-            strokeWeight: 2,
-            strokeColor: "#1E90FF",
-            strokeOpacity: 0.7,
-            fillColor: "#1E90FF",
-            fillOpacity: 0.9
-          });
-          circle.setMap(map);
+              // 파란 점 마커 (내 위치)
+              const markerImage = new kakao.maps.MarkerImage(
+                "https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/blue_dot.png",
+                new kakao.maps.Size(16, 16),
+                { offset: new kakao.maps.Point(8, 8) }
+              );
 
-          bounds.extend(myPos);
-          map.setBounds(bounds);
-        }, () => {
-          alert("현재 위치를 불러올 수 없습니다. GPS 권한을 허용해주세요.");
-          map.setBounds(bounds);
-        });
-      } else {
-        alert("이 기기는 GPS를 지원하지 않습니다.");
-        map.setBounds(bounds);
-      }
+              if (!userMarker) {
+                userMarker = new kakao.maps.Marker({
+                  map,
+                  position: loc,
+                  image: markerImage
+                });
+              } else {
+                userMarker.setPosition(loc);
+              }
+
+              // 지도 중심 내 위치로 이동
+              map.setCenter(loc);
+            }, () => {
+              alert("GPS 위치를 가져올 수 없습니다. 권한을 확인해주세요.");
+            }, { enableHighAccuracy: true });
+          } else {
+            alert("이 기기는 GPS를 지원하지 않습니다.");
+          }
+        }
+      });
     };
   </script>
 </body>
