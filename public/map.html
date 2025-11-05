@@ -3,113 +3,69 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>🚚 The Listen - AI·GPS 배송완료 시스템</title>
+  <title>🚚 The Listen - AI·GPS 배송완료 시스템 v2</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
       overflow: hidden;
       font-family: 'Noto Sans KR', sans-serif;
       background-color: #f5f5f5;
     }
 
     header {
-      background-color: #007bff;
-      color: white;
-      text-align: center;
-      padding: 14px 0;
-      font-size: 1.4rem;
-      font-weight: 600;
-      z-index: 10;
-      position: relative;
+      background-color: #007bff; color: white;
+      text-align: center; padding: 14px 0;
+      font-size: 1.4rem; font-weight: 600;
     }
 
-    #map {
-      width: 100%;
-      height: 50%;
-    }
+    #map { width: 100%; height: 55%; }
 
     #gps-toggle {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      background-color: white;
-      border: 2px solid #007bff;
+      position: absolute; bottom: 20px; right: 20px;
+      width: 54px; height: 54px; border-radius: 50%;
+      background-color: white; border: 2px solid #007bff;
       box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      z-index: 20;
-      transition: 0.3s;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 20; transition: 0.3s;
     }
     #gps-toggle.active { background-color: #007bff; }
-    #gps-toggle svg {
-      width: 26px;
-      height: 26px;
-      fill: #007bff;
-      transition: 0.3s;
-    }
+    #gps-toggle svg { width: 26px; height: 26px; fill: #007bff; transition: 0.3s; }
     #gps-toggle.active svg { fill: white; }
 
     #delivery-list {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 50%;
-      background: white;
-      border-top-left-radius: 12px;
-      border-top-right-radius: 12px;
-      overflow-y: auto;
-      box-shadow: 0 -3px 8px rgba(0,0,0,0.2);
+      position: absolute; bottom: 0; width: 100%; height: 45%;
+      background: white; border-top-left-radius: 12px; border-top-right-radius: 12px;
+      overflow-y: auto; box-shadow: 0 -3px 8px rgba(0,0,0,0.2);
       padding: 10px;
     }
 
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      padding: 10px 12px;
-      margin-bottom: 8px;
-      display: flex;
-      flex-direction: column;
-      font-size: 14px;
-      transition: 0.2s;
-    }
-    .card strong { color: #007bff; }
-
-    .card button {
-      background-color: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
-      margin-top: 6px;
+    .address-group {
+      border: 2px solid #007bff; border-radius: 10px;
+      padding: 8px 10px; margin-bottom: 8px;
+      background: #f8fbff;
     }
 
-    .card button.done {
-      background-color: #28a745;
+    .address-group h4 {
+      margin: 0; font-size: 14px; color: #007bff;
+      display: flex; justify-content: space-between; align-items: center;
     }
+
+    .customer {
+      background: #fff; border: 1px solid #ddd; border-radius: 8px;
+      padding: 6px 8px; margin-top: 6px;
+      font-size: 13px; cursor: pointer;
+    }
+
+    .customer:hover { background-color: #eaf4ff; }
 
     .photo-preview {
-      margin-top: 8px;
-      border-radius: 8px;
-      max-width: 100%;
-      display: none;
+      margin-top: 6px; border-radius: 8px; max-width: 100%; display: none;
     }
 
     #result-info {
-      font-size: 12px;
-      text-align: center;
-      color: #666;
-      margin-bottom: 8px;
+      font-size: 12px; text-align: center; color: #666;
+      margin-bottom: 6px;
     }
   </style>
 </head>
@@ -126,7 +82,7 @@
 
   <!-- 배송 카드 리스트 -->
   <div id="delivery-list">
-    <div id="result-info">📍 지도 마커 클릭 시 배송지 정보 표시 / 사진 촬영 후 배송완료 처리</div>
+    <div id="result-info">📍 지도 마커 클릭 시 주소별 고객 목록 확인 / 사진 촬영 시 배송완료 처리</div>
     <div id="card-container"></div>
   </div>
 
@@ -134,90 +90,108 @@
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
     const deliveryPoints = [
-      { waybill: "A001", name: "김철수", phone: "010-1234-5678", address: "서울 중구 세종대로 110", lat: 37.5665, lng: 126.9780 },
-      { waybill: "A002", name: "이영희", phone: "010-2345-6789", address: "서울 강남구 테헤란로 201", lat: 37.4979, lng: 127.0276 },
-      { waybill: "A003", name: "박민수", phone: "010-3456-7890", address: "서울 송파구 올림픽로 326", lat: 37.5145, lng: 127.1059 },
-      { waybill: "A004", name: "정하늘", phone: "010-4567-8901", address: "서울 구로구 디지털로 32", lat: 37.4843, lng: 126.9011 }
+      { waybill: "A001", name: "김철수", phone: "010-1111-2222", address: "서울 강남구 테헤란로 201", detail: "101동 301호", lat: 37.4979, lng: 127.0276 },
+      { waybill: "A002", name: "이영희", phone: "010-2222-3333", address: "서울 강남구 테헤란로 201", detail: "101동 302호", lat: 37.4979, lng: 127.0276 },
+      { waybill: "A003", name: "박민수", phone: "010-3333-4444", address: "서울 송파구 올림픽로 326", detail: "301동 1002호", lat: 37.5145, lng: 127.1059 },
+      { waybill: "A004", name: "홍길동", phone: "010-4444-5555", address: "서울 송파구 올림픽로 326", detail: "301동 1003호", lat: 37.5145, lng: 127.1059 },
+      { waybill: "A005", name: "정하늘", phone: "010-5555-6666", address: "서울 구로구 디지털로 32", detail: "202호", lat: 37.4843, lng: 126.9011 }
     ];
 
     let map, gpsWatchId = null, userCircle = null;
+    const activeMarkers = [];
 
-    function calculateDistance(lat1, lng1, lat2, lng2) {
-      const R = 6371;
-      const dLat = (lat2 - lat1) * Math.PI / 180;
-      const dLng = (lng2 - lng1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    function groupByAddress(list) {
+      const groups = {};
+      list.forEach(item => {
+        if (!groups[item.address]) groups[item.address] = [];
+        groups[item.address].push(item);
+      });
+      return groups;
     }
 
-    function showCard(info) {
+    function showGroupedCards(addressGroup) {
       const container = document.getElementById("card-container");
       container.innerHTML = "";
-      const card = document.createElement("div");
-      card.className = "card";
+      const groups = groupByAddress(addressGroup);
 
-      card.innerHTML = `
-        <strong>${info.name}</strong>
-        <div><b>운송장:</b> ${info.waybill}</div>
-        <div><b>주소:</b> ${info.address}</div>
-        <div><b>거리:</b> ${info.distance ? info.distance.toFixed(2) + " km" : "-"}</div>
-        <input type="file" accept="image/*" capture="camera" id="photoInput" style="display:none">
-        <img id="photoPreview" class="photo-preview">
-        <button id="takePhoto">📸 사진 촬영</button>
-        <button id="sendPhoto" disabled>🚀 배송 완료</button>
-      `;
+      for (const address in groups) {
+        const customers = groups[address];
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "address-group";
 
-      container.appendChild(card);
+        const header = document.createElement("h4");
+        header.innerHTML = `
+          ${address} <span>📦 잔여 ${customers.length}건</span>
+        `;
+        groupDiv.appendChild(header);
 
-      const photoInput = card.querySelector("#photoInput");
-      const preview = card.querySelector("#photoPreview");
-      const takePhotoBtn = card.querySelector("#takePhoto");
-      const sendBtn = card.querySelector("#sendPhoto");
+        customers.forEach(c => {
+          const custDiv = document.createElement("div");
+          custDiv.className = "customer";
+          custDiv.innerHTML = `
+            <b>${c.name}</b> (${c.detail})<br>
+            <small>운송장: ${c.waybill}</small><br>
+            <small>${c.phone}</small>
+            <img class="photo-preview" id="photo-${c.waybill}">
+            <input type="file" accept="image/*" capture="camera" id="file-${c.waybill}" style="display:none">
+          `;
+          custDiv.onclick = () => handlePhoto(c);
+          groupDiv.appendChild(custDiv);
+        });
 
-      takePhotoBtn.onclick = () => photoInput.click();
+        container.appendChild(groupDiv);
+      }
+    }
 
-      photoInput.onchange = (e) => {
+    function handlePhoto(cust) {
+      const input = document.getElementById(`file-${cust.waybill}`);
+      const preview = document.getElementById(`photo-${cust.waybill}`);
+      input.click();
+      input.onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onload = (ev) => {
             preview.src = ev.target.result;
             preview.style.display = "block";
-            sendBtn.disabled = false;
+            alert(`📸 ${cust.name}(${cust.detail}) 사진 전송 완료`);
+            preview.parentElement.style.background = "#d1f5d3";
+            removeMarker(cust);
           };
           reader.readAsDataURL(file);
         }
       };
+    }
 
-      sendBtn.onclick = () => {
-        sendBtn.classList.add("done");
-        sendBtn.textContent = "✅ 배송완료 처리됨";
-        takePhotoBtn.disabled = true;
-        sendBtn.disabled = true;
-        alert(`📦 ${info.name}님 배송 완료 사진이 서버로 전송되었습니다.`);
-      };
+    function removeMarker(cust) {
+      const marker = activeMarkers.find(m => m.address === cust.address);
+      if (marker) {
+        const group = deliveryPoints.filter(p => p.address === cust.address && p.waybill !== cust.waybill);
+        if (group.length === 0) {
+          marker.marker.setMap(null);
+        }
+      }
     }
 
     window.onload = function() {
       const mapContainer = document.getElementById("map");
-      const mapOption = { center: new kakao.maps.LatLng(37.5665, 126.9780), level: 7 };
-      map = new kakao.maps.Map(mapContainer, mapOption);
-
-      const bounds = new kakao.maps.LatLngBounds();
-
-      // 마커 생성
-      deliveryPoints.forEach(p => {
-        const pos = new kakao.maps.LatLng(p.lat, p.lng);
-        const marker = new kakao.maps.Marker({ map, position: pos });
-        bounds.extend(pos);
-        kakao.maps.event.addListener(marker, "click", () => showCard(p));
-      });
-
-      map.setBounds(bounds);
+      map = new kakao.maps.Map(mapContainer, { center: new kakao.maps.LatLng(37.4979, 127.0276), level: 7 });
 
       const gpsBtn = document.getElementById("gps-toggle");
       const info = document.getElementById("result-info");
+
+      // 주소별로 대표 마커 하나씩
+      const grouped = groupByAddress(deliveryPoints);
+      for (const addr in grouped) {
+        const first = grouped[addr][0];
+        const pos = new kakao.maps.LatLng(first.lat, first.lng);
+        const marker = new kakao.maps.Marker({ map, position: pos });
+        activeMarkers.push({ address: addr, marker });
+
+        kakao.maps.event.addListener(marker, "click", () => {
+          showGroupedCards(grouped[addr]);
+        });
+      }
 
       gpsBtn.addEventListener("click", () => {
         if (gpsBtn.classList.contains("active")) {
@@ -233,29 +207,19 @@
               const myLat = pos.coords.latitude;
               const myLng = pos.coords.longitude;
               const loc = new kakao.maps.LatLng(myLat, myLng);
-
               if (!userCircle) {
                 userCircle = new kakao.maps.Circle({
-                  center: loc,
-                  radius: 8,
-                  strokeWeight: 0,
-                  fillColor: "#1E90FF",
-                  fillOpacity: 1
+                  center: loc, radius: 8, strokeWeight: 0,
+                  fillColor: "#1E90FF", fillOpacity: 1
                 });
                 userCircle.setMap(map);
               } else {
                 userCircle.setPosition(loc);
               }
-
               map.setCenter(loc);
-              deliveryPoints.forEach(p => {
-                p.distance = calculateDistance(myLat, myLng, p.lat, p.lng);
-              });
               info.textContent = "🚛 GPS 활성화됨 - 거리 계산중...";
-            }, () => alert("GPS 권한 확인 필요"), { enableHighAccuracy: true });
-          } else {
-            alert("이 기기는 GPS를 지원하지 않습니다.");
-          }
+            });
+          } else alert("GPS 지원되지 않음");
         }
       });
     };
