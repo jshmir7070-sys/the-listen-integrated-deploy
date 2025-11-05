@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>현재 지도보기 - The Listen</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Listen - 아파트 배송 지도</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
@@ -23,7 +24,7 @@
 </style>
 </head>
 <body>
-<header>현재 지도보기 (실주소/고객카드/사진전송/네비 연동)</header>
+<header>📍 아파트 단지 내 동별 배송 (The Listen)</header>
 <div id="map"></div>
 
 <div id="customerCard">
@@ -33,7 +34,8 @@
 
 <script>
 const map = new kakao.maps.Map(document.getElementById("map"), {
-  center:new kakao.maps.LatLng(37.4979,127.0276), level:5
+  center: new kakao.maps.LatLng(37.5165,127.1053), // 송파구 올림픽로 300 일대
+  level: 5
 });
 const geocoder = new kakao.maps.services.Geocoder();
 let myPosition=null;
@@ -41,141 +43,116 @@ const markerById={};
 let resolvedList=[];
 let markersDrawn=false;
 
-// 내 위치(파란 점)
+// 내 위치 파란 점
 if(navigator.geolocation){
   navigator.geolocation.watchPosition(pos=>{
     myPosition=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
     if(!window.myCircle){
-      window.myCircle=new kakao.maps.CustomOverlay({position:myPosition,content:'<div class="my-location-dot"></div>',map});
-    }else{ window.myCircle.setPosition(myPosition); }
-    if(resolvedList.length>0 && !markersDrawn) drawMarkersSorted();
-  },err=>console.warn('GPS:',err),{enableHighAccuracy:true});
+      window.myCircle=new kakao.maps.CustomOverlay({
+        position:myPosition,
+        content:'<div class="my-location-dot"></div>',
+        map
+      });
+    }else window.myCircle.setPosition(myPosition);
+  },err=>console.warn('GPS 비활성화',err),{enableHighAccuracy:true});
 }
 
-// 아파트 단지 + 일반 주소 혼합(실존 도로명) — 다가구 테스트 포함
-const aptBase = "서울특별시 송파구 올림픽로 300";
-const deliveriesRaw = [
-  // 아파트 단지 같은 좌표(동/호수 다른 고객들) — 한 위치에 여러 집
-  {id:"A101-01", name:"김아파트", phone:"010-1111-2222", address:`${aptBase} (101동 1201호)`, boxes:2},
-  {id:"A101-02", name:"이아파트", phone:"010-2222-3333", address:`${aptBase} (101동 605호)`, boxes:1},
-  {id:"A102-01", name:"박아파트", phone:"010-3333-4444", address:`${aptBase} (102동 801호)`, boxes:3},
-  // 일반 분산 주소
-  {id:"DLV001", name:"고객1", phone:"010-1000-2000", address:"서울특별시 강남구 테헤란로 231", boxes:1},
-  {id:"DLV002", name:"고객2", phone:"010-1001-2001", address:"서울특별시 서초구 반포대로 222", boxes:1},
-  {id:"DLV003", name:"고객3", phone:"010-1002-2002", address:"서울특별시 영등포구 여의나루로 76", boxes:2},
+// 4가구 테스트 데이터 (실제 위치 기반)
+const deliveries=[
+  {id:"DLV101",name:"고객A",phone:"010-1111-2222",address:"서울특별시 송파구 올림픽로 300 (101동 202호)",boxes:2},
+  {id:"DLV104",name:"고객B",phone:"010-2222-3333",address:"서울특별시 송파구 올림픽로 300 (104동 303호)",boxes:1},
+  {id:"DLV106A",name:"고객C",phone:"010-3333-4444",address:"서울특별시 송파구 올림픽로 300 (106동 1001호)",boxes:3},
+  {id:"DLV106B",name:"고객D",phone:"010-4444-5555",address:"서울특별시 송파구 올림픽로 300 (106동 202호)",boxes:2}
 ];
-// 나머지는 목록을 늘려 1~200 충족(데모)
-const baseAddrs = [
-  "서울특별시 강남구 테헤란로 231","서울특별시 마포구 월드컵북로 400","서울특별시 성동구 왕십리로 115",
-  "서울특별시 노원구 동일로 900","서울특별시 종로구 종로 33","서울특별시 중구 세종대로 110","서울특별시 강동구 천호대로 1000"
-];
-while(deliveriesRaw.length<200){
-  const i = deliveriesRaw.length+1;
-  deliveriesRaw.push({
-    id:`DLV${String(i).padStart(3,'0')}`, name:`고객${i}`,
-    phone:`010-${(1000+i).toString().slice(-4)}-${(2000+i).toString().slice(-4)}`,
-    address: baseAddrs[i % baseAddrs.length], boxes: (i%3)+1
-  });
-}
 
-// 거리 계산(Haversine)
+// 거리계산
 function distKm(a,b,c,d){
-  const R=6371, dLat=(c-a)*Math.PI/180, dLng=(d-b)*Math.PI/180;
+  const R=6371,dLat=(c-a)*Math.PI/180,dLng=(d-b)*Math.PI/180;
   const x=Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
 
 // 주소→좌표
 let geocodeDone=0;
-deliveriesRaw.forEach(d=>{
+deliveries.forEach(d=>{
   geocoder.addressSearch(d.address,(res,status)=>{
     geocodeDone++;
-    if(status===kakao.maps.services.Status.OK && res[0]){
-      d.lat=Number(res[0].y); d.lng=Number(res[0].x);
+    if(status===kakao.maps.services.Status.OK&&res[0]){
+      d.lat=Number(res[0].y);d.lng=Number(res[0].x);
       resolvedList.push(d);
     }
-    if(geocodeDone===deliveriesRaw.length) drawMarkersSorted();
+    if(geocodeDone===deliveries.length) drawMarkersSorted();
   });
 });
 
+// 내 위치 기준 정렬 후 마커 생성
 function drawMarkersSorted(){
-  if(markersDrawn || resolvedList.length===0) return;
+  if(markersDrawn||resolvedList.length===0)return;
   let list=[...resolvedList];
   if(myPosition){
-    const myLat=myPosition.getLat(), myLng=myPosition.getLng();
+    const myLat=myPosition.getLat(),myLng=myPosition.getLng();
     list.sort((a,b)=>distKm(myLat,myLng,a.lat,a.lng)-distKm(myLat,myLng,b.lat,b.lng));
   }
-  list.forEach((d,idx)=>placeMarker(d,idx+1));
+  list.forEach((d,i)=>placeMarker(d,i+1));
   markersDrawn=true;
-  // 총 건수 저장 → 대시보드 표시용
-  localStorage.setItem('totalDeliveries', String(list.length));
 }
 
-function placeMarker(d, order){
+function placeMarker(d,order){
   const el=document.createElement('div');
-  el.style.cssText=`
-    background:#007bff;color:#fff;border-radius:50%;width:30px;height:30px;
-    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;
-    border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
+  el.style.cssText=`background:#007bff;color:#fff;border-radius:50%;
+    width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+    font-weight:900;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
   el.textContent=order;
-  const overlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(d.lat,d.lng),content:el,map});
+  const overlay=new kakao.maps.CustomOverlay({
+    position:new kakao.maps.LatLng(d.lat,d.lng),
+    content:el,
+    map
+  });
   markerById[d.id]=overlay;
   el.addEventListener('click',()=>openCard(d,order));
 }
 
-function openCard(d, order){
-  const card=document.getElementById('customerCard'), box=document.getElementById('card-content');
-  // 동일 주소 다가구(동·호) 묶음 표시: 같은 address(괄호 앞 부분)가 같은 단지로 가정
-  const base = d.address.split(' (')[0];
-  const group = resolvedList.filter(x=>x.address.startsWith(base));
-  const header = `<div class="delivery-item" style="text-align:center;">
-    <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 <span class="tag">묶음 ${group.length}세대</span></div>
-    <p><b>단지 주소</b> : ${base}</p>
-    <div class="btn-row">
-      <button class="btn" onclick="startNavi(${d.lat},${d.lng}, '${encodeURIComponent(base)}')">🚘 카카오네비</button>
-      <button class="btn gray" onclick="closeCard()">닫기</button>
-    </div>
-  </div>`;
-
-  const listHtml = group.map(g=>`
-    <div class="delivery-item">
-      <p><b>고객</b> ${g.name} &nbsp; <b>운송장</b> ${g.id} &nbsp; <span class="tag">박스 ${g.boxes}개</span></p>
-      <p><b>상세주소</b> : ${g.address}</p>
-      <p><b>전화</b> : ${g.phone}</p>
+// 고객카드
+function openCard(d,order){
+  const card=document.getElementById('customerCard');
+  const box=document.getElementById('card-content');
+  box.innerHTML=`
+    <div class="delivery-item" style="text-align:center;">
+      <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 <span class="tag">${d.address.match(/\((.*?)\)/)[1]}</span></div>
+      <p><b>고객</b>: ${d.name}</p>
+      <p><b>전화번호</b>: ${d.phone}</p>
+      <p><b>주소</b>: ${d.address}</p>
+      <p><b>운송장</b>: ${d.id}</p>
+      <p><b>박스수량</b>: ${d.boxes}개</p>
       <div class="btn-row">
-        <button class="btn" onclick="capturePhoto('${g.id}','${g.address.replaceAll("'","")}')">📸 사진 촬영·전송</button>
+        <button class="btn" onclick="startNavi(${d.lat},${d.lng}, '${encodeURIComponent(d.address)}')">🚘 네비 연결</button>
+        <button class="btn" onclick="capturePhoto('${d.id}','${d.address}')">📸 사진 전송</button>
+        <button class="btn gray" onclick="closeCard()">닫기</button>
       </div>
-    </div>`).join('');
-
-  box.innerHTML = header + listHtml;
+    </div>`;
   card.classList.add('active');
 }
+function closeCard(){document.getElementById('customerCard').classList.remove('active');}
 
-function closeCard(){ document.getElementById('customerCard').classList.remove('active'); }
-
+// 사진촬영 후 마커 투명화
 function capturePhoto(id,address){
   const input=document.createElement('input');
-  input.type='file'; input.accept='image/*'; input.capture='environment';
-  input.onchange=(e)=>{
-    const f=e.target.files && e.target.files[0]; if(!f) return;
-    alert(`📸 전송 완료\n· 주소: ${address}\n· 운송장: ${id}`);
-    // 완료 저장(당일)
-    const today = new Date().toISOString().slice(0,10);
-    const completed = JSON.parse(localStorage.getItem('completed')||'[]');
-    completed.push({id,address,date:today,photo:true});
-    localStorage.setItem('completed', JSON.stringify(completed));
-    // 마커 반투명 처리
-    const mk=markerById[id]; if(mk) mk.getContent().style.opacity='0.4';
+  input.type='file';input.accept='image/*';input.capture='environment';
+  input.onchange=e=>{
+    const f=e.target.files&&e.target.files[0];if(!f)return;
+    alert(`📸 전송 완료\n주소:${address}\n운송장:${id}`);
+    const mk=markerById[id];if(mk)mk.getContent().style.opacity='0.4';
+    closeCard();
   };
   input.click();
 }
 
+// 카카오네비 연동
 function startNavi(lat,lng,encodedName){
-  location.href = `https://map.kakao.com/link/to/${encodedName},${lat},${lng}`;
+  location.href=`https://map.kakao.com/link/to/${encodedName},${lat},${lng}`;
 }
-
-window.closeCard=closeCard;
 window.capturePhoto=capturePhoto;
+window.closeCard=closeCard;
 window.startNavi=startNavi;
 </script>
 </body>
