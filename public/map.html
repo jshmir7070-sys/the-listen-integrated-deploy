@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>현재 지도 - The Listen</title>
+<title>The Listen - 지도</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
@@ -32,28 +32,71 @@ const map=new kakao.maps.Map(document.getElementById("map"),{center:new kakao.ma
 const geocoder=new kakao.maps.services.Geocoder();
 let deliveries=[];try{deliveries=JSON.parse(localStorage.getItem('deliveriesJSON')||'[]');}catch{deliveries=[];}
 if(!deliveries.length){deliveries=[{id:"TEST1",name:"테스트",phone:"010-0000-0000",address:"경기도 시흥시 수풀안길 19-30 101동 202호",boxes:1}];}
-let myPos=null;if(navigator.geolocation){navigator.geolocation.watchPosition(p=>{myPos=new kakao.maps.LatLng(p.coords.latitude,p.coords.longitude);
-if(!window.myCircle){window.myCircle=new kakao.maps.CustomOverlay({position:myPos,content:'<div class="my-location-dot"></div>',map});}
-else window.myCircle.setPosition(myPos);},{enableHighAccuracy:true});}
 
+// GPS 표시
+let myPos=null;if(navigator.geolocation){
+  navigator.geolocation.watchPosition(p=>{
+    myPos=new kakao.maps.LatLng(p.coords.latitude,p.coords.longitude);
+    if(!window.myCircle){
+      window.myCircle=new kakao.maps.CustomOverlay({position:myPos,content:'<div class="my-location-dot"></div>',map});
+    }else window.myCircle.setPosition(myPos);
+  },()=>{}, {enableHighAccuracy:true});
+}
+
+// 마커
 const markerById={};const bounds=new kakao.maps.LatLngBounds();
-deliveries.forEach((d,i)=>{if(d.lat&&d.lng)return placeMarker(d,i+1);geocoder.addressSearch(d.address,(r,s)=>{if(s===kakao.maps.services.Status.OK&&r[0]){d.lat=+r[0].y;d.lng=+r[0].x;placeMarker(d,i+1);}});});
-function placeMarker(d,o){const dong=d.address.match(/(\d+)동/)?.[1]||"0";
-const color=dong.endsWith("1")?"#007bff":dong.endsWith("3")?"#10b981":"#f59e0b";
-const el=document.createElement('div');el.style.cssText=`background:${color};color:#fff;border-radius:50%;width:32px;height:32px;
-display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;border:2px solid #fff;cursor:pointer;`;
-el.textContent=o;const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(d.lat,d.lng),content:el,map});
-markerById[d.id]=ov;bounds.extend(new kakao.maps.LatLng(d.lat,d.lng));map.setBounds(bounds);
-el.addEventListener('click',()=>openCard(d,o));}
-function openCard(d,o){const card=document.getElementById('customerCard');const box=document.getElementById('card-content');
-box.innerHTML=`<div class="delivery-item"><h3>${o}️⃣ ${d.name}</h3><p>${d.address}</p><p>📦 ${d.boxes}개</p>
-<button class="btn" onclick="startNavi(${d.lat},${d.lng},'${encodeURIComponent(d.address)}')">🚘 길안내</button>
-<button class="btn" onclick="photo('${d.id}')">📸 사진 전송</button><button class="btn gray" onclick="closeCard()">닫기</button></div>`;
-card.classList.add('active');}
+deliveries.forEach((d,i)=>{
+  if(d.lat&&d.lng){placeMarker(d,i+1);}else{
+    geocoder.addressSearch(d.address,(r,s)=>{
+      if(s===kakao.maps.services.Status.OK&&r[0]){d.lat=+r[0].y;d.lng=+r[0].x;placeMarker(d,i+1);}
+    });
+  }
+});
+
+function placeMarker(d,o){
+  const dong=d.address.match(/(\d+)동/)?.[1]||"0";
+  const color=dong.endsWith("1")?"#007bff":dong.endsWith("3")?"#10b981":"#f59e0b";
+  const el=document.createElement('div');
+  el.style.cssText=`background:${color};color:#fff;border-radius:50%;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;
+  border:2px solid #fff;cursor:pointer;`;
+  el.textContent=o;
+  const ov=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(d.lat,d.lng),content:el,map});
+  markerById[d.id]=ov;bounds.extend(new kakao.maps.LatLng(d.lat,d.lng));map.setBounds(bounds);
+  el.addEventListener('click',()=>openCard(d,o));
+}
+
+function openCard(d,o){
+  const card=document.getElementById('customerCard');const box=document.getElementById('card-content');
+  box.innerHTML=`
+  <div class="delivery-item">
+    <h3>${o}️⃣ ${d.name}</h3>
+    <p>${d.address}</p>
+    <p>📞 ${d.phone}</p>
+    <p>📦 ${d.boxes}개</p>
+    <p>운송장: ${d.id}</p>
+    <button class="btn" onclick="startNavi(${d.lat},${d.lng},'${encodeURIComponent(d.address)}')">🚘 길안내</button>
+    <button class="btn" onclick="photo('${d.id}')">📸 사진 전송</button>
+    <button class="btn gray" onclick="closeCard()">닫기</button>
+  </div>`;
+  card.classList.add('active');
+}
 function closeCard(){document.getElementById('customerCard').classList.remove('active');}
-function photo(id){const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';
-i.onchange=e=>{if(!e.target.files[0])return;alert('📸 전송완료');markerById[id]?.getContent().style.opacity='0.4';closeCard();};i.click();}
-function startNavi(lat,lng,name){location.href=`https://map.kakao.com/link/to/${name},${lat},${lng}`;}
+function photo(id){
+  const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';
+  i.onchange=e=>{
+    if(!e.target.files[0])return;alert('📸 전송 완료');
+    markerById[id]?.getContent().style.opacity='0.4';closeCard();
+  };i.click();
+}
+// ✅ 카카오 네비 연동 수정 (앱/웹 둘다 호환)
+function startNavi(lat,lng,name){
+  const kakaoUrl=`kakaomap://route?ep=${lat},${lng}&by=CAR`;
+  const webUrl=`https://map.kakao.com/link/to/${name},${lat},${lng}`;
+  // 앱 우선, 실패 시 웹
+  document.location.href=kakaoUrl;
+  setTimeout(()=>{document.location.href=webUrl;},1000);
+}
 </script>
 </body>
 </html>
