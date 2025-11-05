@@ -3,77 +3,85 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>회원가입 - The Listen</title>
-<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<title>The Listen - 로그인 (테스트용)</title>
 <style>
-  body{margin:0;background:#f7f9fc;font-family:"Noto Sans KR",sans-serif}
-  .wrap{max-width:520px;margin:24px auto;padding:16px}
-  h1{text-align:center;margin:10px 0 18px}
-  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:18px}
-  .row{margin-bottom:12px}
+  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
+  .wrap{max-width:420px;margin:64px auto;padding:20px}
+  .logo{
+    font-size:46px;font-weight:900;text-align:center;
+    background:linear-gradient(90deg,#007bff,#00b4d8);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent; margin-bottom:10px;
+  }
+  .sub{color:#6b7280;text-align:center;margin-bottom:24px;font-size:15px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:24px}
   label{display:block;font-weight:700;margin-bottom:6px}
-  input,button{font-size:15px}
-  input[type="text"],input[type="password"],input[type="tel"]{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px}
-  .flex{display:flex;gap:8px}
-  .btn{background:#007bff;color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}
-  .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
-  .foot{display:flex;justify-content:space-between;margin-top:12px}
-  a{color:#007bff;text-decoration:none;font-weight:700}
+  input[type="text"],input[type="password"]{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px}
+  .chk{display:flex;align-items:center;gap:6px;margin:10px 0;font-size:14px}
+  .btn{width:100%;background:#007bff;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer}
+  .links{display:flex;justify-content:space-between;margin-top:14px;font-size:14px}
+  .links a{color:#007bff;text-decoration:none;font-weight:700}
+  .hint{color:#64748b;margin-top:10px;font-size:13px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>회원가입</h1>
-  <div class="card">
-    <div class="row"><label>이름</label><input id="name" type="text" placeholder="홍길동" /></div>
-    <div class="row"><label>전화번호</label><input id="phone" type="tel" placeholder="010-0000-0000" /></div>
-    <div class="row"><label>주소</label>
-      <div class="flex">
-        <input id="postcode" type="text" placeholder="우편번호" readonly />
-        <button class="btn" onclick="findPost()">우편번호 검색</button>
+  <div class="wrap">
+    <div class="logo">The Listen</div>
+    <div class="sub">AI·GPS 기반 배송 어플</div>
+
+    <div class="card">
+      <label for="loginId">아이디</label>
+      <input id="loginId" type="text" placeholder="아이디 입력" value="1234" />
+
+      <label for="loginPw">비밀번호</label>
+      <input id="loginPw" type="password" placeholder="비밀번호 입력" value="1234" />
+
+      <div class="chk">
+        <input id="saveId" type="checkbox" />
+        <label for="saveId">아이디 저장</label>
       </div>
-    </div>
-    <div class="row"><input id="addr1" type="text" placeholder="도로명 주소" readonly /></div>
-    <div class="row"><input id="addr2" type="text" placeholder="상세주소(동·호수 등)" /></div>
-    <div class="chk"><input id="smschk" type="checkbox" /> <label for="smschk">전화번호 인증에 동의합니다.</label></div>
-    <div class="chk"><input id="agre" type="checkbox" /> <label for="agre">개인정보 처리방침에 동의합니다.</label></div>
-    <div class="row"><label>아이디</label><input id="uid" type="text" placeholder="아이디" /></div>
-    <div class="row"><label>비밀번호</label><input id="upw" type="password" placeholder="비밀번호" /></div>
-    <div class="foot">
-      <a href="index.html">취소</a>
-      <button class="btn" onclick="submitJoin()">가입하기</button>
+
+      <button type="button" class="btn" onclick="login()">로그인</button>
+
+      <div class="links">
+        <a href="signup.html">회원가입</a>
+        <div>
+          <a href="find_id.html" style="margin-right:10px;">아이디찾기</a>
+          <a href="find_pw.html">비밀번호찾기</a>
+        </div>
+      </div>
+      <div class="hint">※ 테스트 로그인: 아이디 1234 / 비밀번호 1234</div>
     </div>
   </div>
-</div>
+
 <script>
-function findPost(){
-  new daum.Postcode({
-    oncomplete: function(data){
-      postcode.value = data.zonecode;
-      addr1.value = data.roadAddress || data.jibunAddress;
-      addr2.focus();
-    }
-  }).open();
-}
-function submitJoin(){
-  if(!name.value||!phone.value||!postcode.value||!addr1.value||!uid.value||!upw.value){
-    alert('필수 항목을 모두 입력하세요.'); return;
-  }
-  if(!smschk.checked){ alert('전화번호 인증 동의가 필요합니다.'); return; }
-  if(!agre.checked){ alert('개인정보 처리방침 동의가 필요합니다.'); return; }
+window.onload=function(){
+  const savedId=localStorage.getItem('savedId');
+  if(savedId){ loginId.value=savedId; saveId.checked=true; }
+};
+
+// 기본 테스트 계정 추가
+(function ensureTestUser(){
   const users = JSON.parse(localStorage.getItem('users')||'[]');
-  if(users.find(u=>u.id===uid.value.trim())){ alert('이미 사용중인 아이디입니다.'); return; }
-  const user = {
-    id: uid.value.trim(),
-    pw: upw.value.trim(),
-    name: name.value.trim(),
-    phone: phone.value.trim(),
-    address: {postcode: postcode.value, addr1: addr1.value, addr2: addr2.value}
-  };
-  users.push(user);
-  localStorage.setItem('users', JSON.stringify(users));
-  alert('가입이 완료되었습니다. 로그인해 주세요.');
-  location.href='index.html';
+  if(!users.find(u=>u.id==='1234')){
+    users.push({id:'1234',pw:'1234',name:'테스트기사',phone:'010-0000-0000'});
+    localStorage.setItem('users', JSON.stringify(users));
+  }
+})();
+
+function login(){
+  const id=loginId.value.trim(), pw=loginPw.value.trim();
+  if(!id||!pw){ alert('아이디와 비밀번호를 입력하세요.'); return; }
+
+  const users = JSON.parse(localStorage.getItem('users')||'[]');
+  const found = users.find(u=>u.id===id && u.pw===pw);
+  if(!found){ alert('아이디 또는 비밀번호가 올바르지 않습니다.'); return; }
+
+  if(saveId.checked) localStorage.setItem('savedId', id);
+  else localStorage.removeItem('savedId');
+
+  localStorage.setItem('currentUser', JSON.stringify(found));
+  alert(`✅ 환영합니다, ${found.name}님!`);
+  location.href='dashboard.html';
 }
 </script>
 </body>
