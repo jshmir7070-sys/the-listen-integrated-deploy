@@ -1,11 +1,12 @@
 {
-  "name": "the-listen-integrated",
+  "name": "the-listen-integrated-deploy",
   "version": "1.0.0",
+  "description": "The Listen Cloudtype Node.js Server",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.18.2"
   }
 }
