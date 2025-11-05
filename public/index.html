@@ -1,31 +1,46 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
   <title>The Listen 로그인</title>
   <style>
-    body {font-family:'Noto Sans KR',sans-serif;background:#0b1220;color:#fff;text-align:center;margin-top:80px;}
-    h1{font-size:28px;margin-bottom:10px;}
-    input,button{margin:8px;padding:10px;width:200px;border-radius:6px;border:none;}
-    button{background:#4c8fff;color:#fff;font-weight:bold;cursor:pointer;}
+    body {
+      background-color: #0e1621;
+      color: white;
+      text-align: center;
+      font-family: "Noto Sans KR", sans-serif;
+    }
+    input, button {
+      margin: 10px;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    button {
+      background-color: #3b82f6;
+      color: white;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <h1>🚚 The Listen</h1>
-  <p>AI·GPS 기반 배송 최적화 로그인</p>
-
-  <form id="loginForm">
-    <input id="username" placeholder="아이디" required /><br>
-    <input id="password" type="password" placeholder="비밀번호" required /><br>
-    <button type="submit">로그인</button>
-  </form>
+  <h3>AI·GPS 기반 배송 최적화 로그인</h3>
+  <input id="userId" type="text" placeholder="아이디"><br>
+  <input id="password" type="password" placeholder="비밀번호"><br>
+  <button onclick="login()">로그인</button>
 
   <script>
-    document.getElementById("loginForm").addEventListener("submit",(e)=>{
-      e.preventDefault();
-      alert("로그인 성공! 다음 단계로 이동합니다.");
-    });
+    function login() {
+      const id = document.getElementById('userId').value;
+      const pw = document.getElementById('password').value;
+
+      if (id === '1234' && pw === '1234') {
+        alert("로그인 성공! 다음 단계로 이동합니다.");
+        window.location.href = "/login";  // ✅ 이 부분이 핵심입니다
+      } else {
+        alert("아이디 또는 비밀번호가 올바르지 않습니다.");
+      }
+    }
   </script>
 </body>
 </html>
