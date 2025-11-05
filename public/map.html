@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>🚚 The Listen - 실시간 GPS 배송지도</title>
+  <title>🚚 The Listen - AI·GPS 경로 최적화</title>
   <style>
     html, body {
       margin: 0;
@@ -30,7 +30,6 @@
       top: 60px;
       left: 0;
     }
-    /* GPS 버튼 (오른쪽 하단 원형 토글) */
     #gps-toggle {
       position: absolute;
       bottom: 20px;
@@ -48,42 +47,64 @@
       z-index: 20;
       transition: 0.3s;
     }
-    #gps-toggle.active {
-      background-color: #007bff;
-    }
+    #gps-toggle.active { background-color: #007bff; }
     #gps-toggle svg {
       width: 26px;
       height: 26px;
       fill: #007bff;
       transition: 0.3s;
     }
-    #gps-toggle.active svg {
-      fill: white;
+    #gps-toggle.active svg { fill: white; }
+
+    #resultBox {
+      position: absolute;
+      bottom: 90px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      font-size: 13px;
+      max-width: 250px;
+      z-index: 30;
+      line-height: 1.4;
     }
   </style>
 </head>
 <body>
-  <header>🚛 The Listen AI·GPS 실시간 배송지도</header>
+  <header>🚛 The Listen AI·GPS 경로 최적화</header>
   <div id="map"></div>
+  <div id="resultBox">📍 GPS 활성화 후 배송지 거리 계산중...</div>
 
-  <!-- 🧭 GPS 토글 버튼 -->
+  <!-- GPS 버튼 -->
   <div id="gps-toggle" title="GPS 위치 추적 토글">
     <svg viewBox="0 0 24 24">
       <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 3h-1.07a7.002 7.002 0 00-5.93-5.93V4a1 1 0 10-2 0v1.07a7.002 7.002 0 00-5.93 5.93H3a1 1 0 100 2h1.07a7.002 7.002 0 005.93 5.93V20a1 1 0 102 0v-1.07a7.002 7.002 0 005.93-5.93H21a1 1 0 100-2zm-9 5a5 5 0 110-10 5 5 0 010 10z"/>
     </svg>
   </div>
 
-  <!-- ✅ Kakao Map SDK -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
     const deliveryPoints = [
-      { lat: 37.5665, lng: 126.9780 },
-      { lat: 37.4979, lng: 127.0276 },
-      { lat: 37.5145, lng: 127.1059 },
-      { lat: 37.4843, lng: 126.9011 }
+      { name: "서울 시청", lat: 37.5665, lng: 126.9780 },
+      { name: "강남역", lat: 37.4979, lng: 127.0276 },
+      { name: "송파구청", lat: 37.5145, lng: 127.1059 },
+      { name: "구로디지털단지", lat: 37.4843, lng: 126.9011 }
     ];
 
     let map, gpsWatchId = null, userCircle = null;
+
+    function calculateDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371; // km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
 
     window.onload = function() {
       const mapContainer = document.getElementById("map");
@@ -92,39 +113,41 @@
         level: 7
       };
       map = new kakao.maps.Map(mapContainer, mapOption);
-
-      // 기본 배송지 마커
       const bounds = new kakao.maps.LatLngBounds();
-      deliveryPoints.forEach((p) => {
+
+      // 배송지 마커
+      deliveryPoints.forEach(p => {
         const pos = new kakao.maps.LatLng(p.lat, p.lng);
         new kakao.maps.Marker({ map, position: pos });
         bounds.extend(pos);
       });
       map.setBounds(bounds);
 
-      // GPS 버튼
       const gpsBtn = document.getElementById("gps-toggle");
+      const resultBox = document.getElementById("resultBox");
+
       gpsBtn.addEventListener("click", () => {
         if (gpsBtn.classList.contains("active")) {
-          // 🔴 GPS 끄기
+          // GPS OFF
           gpsBtn.classList.remove("active");
           if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
           if (userCircle) userCircle.setMap(null);
           userCircle = null;
+          resultBox.innerHTML = "📍 GPS 중지됨.";
         } else {
-          // 🔵 GPS 켜기
+          // GPS ON
           gpsBtn.classList.add("active");
           if (navigator.geolocation) {
             gpsWatchId = navigator.geolocation.watchPosition((pos) => {
-              const lat = pos.coords.latitude;
-              const lng = pos.coords.longitude;
-              const loc = new kakao.maps.LatLng(lat, lng);
+              const myLat = pos.coords.latitude;
+              const myLng = pos.coords.longitude;
+              const loc = new kakao.maps.LatLng(myLat, myLng);
 
-              // 🔵 파란색 원형 점 (내 위치)
+              // 내 위치 점
               if (!userCircle) {
                 userCircle = new kakao.maps.Circle({
                   center: loc,
-                  radius: 8, // 점 크기
+                  radius: 8,
                   strokeWeight: 0,
                   fillColor: "#1E90FF",
                   fillOpacity: 1
@@ -136,8 +159,24 @@
 
               // 지도 중심 이동
               map.setCenter(loc);
+
+              // 거리 계산
+              const distances = deliveryPoints.map(p => {
+                const d = calculateDistance(myLat, myLng, p.lat, p.lng);
+                return { ...p, distance: d };
+              });
+
+              // 가까운 순서 정렬
+              distances.sort((a, b) => a.distance - b.distance);
+
+              // 상자에 표시
+              let html = "🚛 가까운 순서<br>";
+              distances.forEach((p, i) => {
+                html += `${i + 1}. ${p.name} (${p.distance.toFixed(2)} km)<br>`;
+              });
+              resultBox.innerHTML = html;
             }, () => {
-              alert("GPS 위치를 가져올 수 없습니다. 권한을 허용해주세요.");
+              alert("GPS 위치를 가져올 수 없습니다. 권한을 확인해주세요.");
             }, { enableHighAccuracy: true });
           } else {
             alert("이 기기는 GPS를 지원하지 않습니다.");
