@@ -3,47 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Listen - 메인화면</title>
+  <title>The Listen - 배송경로 지도</title>
   <style>
     body {
-      font-family: 'Noto Sans KR', sans-serif;
-      text-align: center;
       margin: 0;
-      background-color: #ffffff;
-      color: #000;
+      font-family: 'Noto Sans KR', sans-serif;
     }
     header {
       background-color: #007bff;
       color: white;
-      padding: 20px 0;
-      font-size: 1.5rem;
+      text-align: center;
+      padding: 16px 0;
+      font-size: 1.4rem;
       font-weight: 600;
     }
-    button {
-      margin-top: 50px;
-      background-color: #007bff;
-      border: none;
-      color: white;
-      padding: 14px 32px;
-      font-size: 1.1rem;
-      border-radius: 8px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
+    #map {
+      width: 100%;
+      height: calc(100vh - 70px);
     }
   </style>
 </head>
 <body>
-  <header>🚚 The Listen</header>
-  <h2>AI·GPS 기반 배송 경로 최적화 시스템 메인화면</h2>
+  <header>🚚 The Listen 배송경로 지도</header>
+  <div id="map"></div>
 
-  <button onclick="goMap()">배송경로 보기</button>
-
+  <!-- ✅ Kakao Map API -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1e3c021083458339854b888af0db0328"></script>
   <script>
-    function goMap() {
-      window.location.href = '/map';
-    }
+    const mapContainer = document.getElementById('map');
+    const mapOption = {
+      center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 중심
+      level: 7
+    };
+    const map = new kakao.maps.Map(mapContainer, mapOption);
+
+    // ✅ 테스트용 마커
+    const marker = new kakao.maps.Marker({
+      position: new kakao.maps.LatLng(37.5665, 126.9780)
+    });
+    marker.setMap(map);
   </script>
 </body>
 </html>
