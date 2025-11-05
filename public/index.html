@@ -1,55 +1,59 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>The Listen 로그인</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: 'Noto Sans KR', sans-serif;
-      background: #0d1117;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-    input {
-      padding: 10px;
-      margin: 5px;
-      border-radius: 6px;
-      border: none;
-      width: 250px;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 20px;
-      cursor: pointer;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>The Listen - 로그인</title>
+<style>
+  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
+  .wrap{max-width:420px;margin:40px auto;padding:20px}
+  .logo{
+    font-size:34px;font-weight:900;letter-spacing:0.5px;
+    background:linear-gradient(90deg,#007bff,#00b4d8);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-align:center;margin-bottom:14px;
+  }
+  .sub{color:#6b7280;text-align:center;margin-bottom:24px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:22px}
+  .row{margin-bottom:14px}
+  label{display:block;font-weight:700;margin-bottom:6px}
+  input[type="text"],input[type="password"]{
+    width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;
+    font-size:15px;outline:none
+  }
+  .btn{width:100%;background:#007bff;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer}
+  .links{display:flex;justify-content:space-between;margin-top:12px}
+  .links a{color:#007bff;text-decoration:none;font-weight:700}
+</style>
 </head>
 <body>
-  <h1>🚚 The Listen</h1>
-  <h3>AI·GPS 기반 배송 경로 최적화 로그인</h3>
-  <input type="text" id="id" placeholder="아이디" /><br />
-  <input type="password" id="pw" placeholder="비밀번호" /><br />
-  <button onclick="login()">로그인</button>
-
-  <script>
-    function login() {
-      const id = document.getElementById('id').value;
-      const pw = document.getElementById('pw').value;
-      if (id && pw) {
-        alert('로그인 성공! 다음 단계로 이동합니다.');
-        window.location.href = '/main';
-      } else {
-        alert('아이디와 비밀번호를 입력해주세요.');
-      }
-    }
-  </script>
+  <div class="wrap">
+    <div class="logo">The Listen</div>
+    <div class="sub">AI·GPS 기반 배송 어플</div>
+    <div class="card">
+      <div class="row">
+        <label>아이디</label>
+        <input id="loginId" type="text" placeholder="아이디" />
+      </div>
+      <div class="row">
+        <label>비밀번호</label>
+        <input id="loginPw" type="password" placeholder="비밀번호" />
+      </div>
+      <button class="btn" onclick="go()">로그인</button>
+      <div class="links">
+        <a href="signup.html">회원가입</a>
+        <div>
+          <a href="find_id.html" style="margin-right:12px;">아이디찾기</a>
+          <a href="find_pw.html">비밀번호찾기</a>
+        </div>
+      </div>
+    </div>
+  </div>
+<script>
+function go(){
+  // 실제 인증 로직 대신 데모로 바로 대시보드 이동
+  location.href = 'dashboard.html';
+}
+</script>
 </body>
 </html>
