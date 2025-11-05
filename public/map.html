@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Listen - 아파트 배송 지도</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>현재 지도보기 - The Listen</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
@@ -24,7 +23,7 @@
 </style>
 </head>
 <body>
-<header>📍 아파트 단지 내 동별 배송 (The Listen)</header>
+<header>현재 지도보기 (실주소/아파트 동 마크/사진전송/네비)</header>
 <div id="map"></div>
 
 <div id="customerCard">
@@ -34,38 +33,31 @@
 
 <script>
 const map = new kakao.maps.Map(document.getElementById("map"), {
-  center: new kakao.maps.LatLng(37.5165,127.1053), // 송파구 올림픽로 300 일대
-  level: 5
+  center:new kakao.maps.LatLng(37.5165,127.1053), level:5
 });
 const geocoder = new kakao.maps.services.Geocoder();
 let myPosition=null;
 const markerById={};
-let resolvedList=[];
-let markersDrawn=false;
+let resolvedList=[]; let markersDrawn=false;
 
-// 내 위치 파란 점
+// 내 위치(파란 점)
 if(navigator.geolocation){
   navigator.geolocation.watchPosition(pos=>{
     myPosition=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
     if(!window.myCircle){
-      window.myCircle=new kakao.maps.CustomOverlay({
-        position:myPosition,
-        content:'<div class="my-location-dot"></div>',
-        map
-      });
+      window.myCircle=new kakao.maps.CustomOverlay({position:myPosition,content:'<div class="my-location-dot"></div>',map});
     }else window.myCircle.setPosition(myPosition);
-  },err=>console.warn('GPS 비활성화',err),{enableHighAccuracy:true});
+  },err=>console.warn('GPS:',err),{enableHighAccuracy:true});
 }
 
-// 4가구 테스트 데이터 (실제 위치 기반)
-const deliveries=[
-  {id:"DLV101",name:"고객A",phone:"010-1111-2222",address:"서울특별시 송파구 올림픽로 300 (101동 202호)",boxes:2},
-  {id:"DLV104",name:"고객B",phone:"010-2222-3333",address:"서울특별시 송파구 올림픽로 300 (104동 303호)",boxes:1},
-  {id:"DLV106A",name:"고객C",phone:"010-3333-4444",address:"서울특별시 송파구 올림픽로 300 (106동 1001호)",boxes:3},
-  {id:"DLV106B",name:"고객D",phone:"010-4444-5555",address:"서울특별시 송파구 올림픽로 300 (106동 202호)",boxes:2}
+// === 테스트용: 1가구만 생성 ===
+const deliveriesRaw = [
+  {id:"TEST101-202", name:"테스트고객", phone:"010-1234-5678",
+   address:"서울특별시 송파구 올림픽로 300 (101동 202호)", boxes:2}
 ];
+// ※ 아파트 여러 세대 테스트시 아래 예시 추가해서 확장하세요.
+// deliveriesRaw.push({id:"TEST104-303", name:"고객B", phone:"010-2222-3333", address:"서울특별시 송파구 올림픽로 300 (104동 303호)", boxes:1});
 
-// 거리계산
 function distKm(a,b,c,d){
   const R=6371,dLat=(c-a)*Math.PI/180,dLng=(d-b)*Math.PI/180;
   const x=Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
@@ -74,51 +66,46 @@ function distKm(a,b,c,d){
 
 // 주소→좌표
 let geocodeDone=0;
-deliveries.forEach(d=>{
+deliveriesRaw.forEach(d=>{
   geocoder.addressSearch(d.address,(res,status)=>{
     geocodeDone++;
-    if(status===kakao.maps.services.Status.OK&&res[0]){
-      d.lat=Number(res[0].y);d.lng=Number(res[0].x);
+    if(status===kakao.maps.services.Status.OK && res[0]){
+      d.lat=Number(res[0].y); d.lng=Number(res[0].x);
       resolvedList.push(d);
     }
-    if(geocodeDone===deliveries.length) drawMarkersSorted();
+    if(geocodeDone===deliveriesRaw.length) drawMarkersSorted();
   });
 });
 
-// 내 위치 기준 정렬 후 마커 생성
 function drawMarkersSorted(){
-  if(markersDrawn||resolvedList.length===0)return;
+  if(markersDrawn||resolvedList.length===0) return;
   let list=[...resolvedList];
   if(myPosition){
-    const myLat=myPosition.getLat(),myLng=myPosition.getLng();
+    const myLat=myPosition.getLat(), myLng=myPosition.getLng();
     list.sort((a,b)=>distKm(myLat,myLng,a.lat,a.lng)-distKm(myLat,myLng,b.lat,b.lng));
   }
   list.forEach((d,i)=>placeMarker(d,i+1));
   markersDrawn=true;
+  localStorage.setItem('totalDeliveries', String(list.length));
 }
 
-function placeMarker(d,order){
+function placeMarker(d, order){
   const el=document.createElement('div');
-  el.style.cssText=`background:#007bff;color:#fff;border-radius:50%;
-    width:30px;height:30px;display:flex;align-items:center;justify-content:center;
-    font-weight:900;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
+  el.style.cssText=`background:#007bff;color:#fff;border-radius:50%;width:30px;height:30px;
+    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;
+    border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
   el.textContent=order;
-  const overlay=new kakao.maps.CustomOverlay({
-    position:new kakao.maps.LatLng(d.lat,d.lng),
-    content:el,
-    map
-  });
+  const overlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(d.lat,d.lng),content:el,map});
   markerById[d.id]=overlay;
   el.addEventListener('click',()=>openCard(d,order));
 }
 
-// 고객카드
-function openCard(d,order){
-  const card=document.getElementById('customerCard');
-  const box=document.getElementById('card-content');
+function openCard(d, order){
+  const card=document.getElementById('customerCard'), box=document.getElementById('card-content');
+  const dong = (d.address.match(/\((.*?)\)/)||['',''])[1]||'';
   box.innerHTML=`
     <div class="delivery-item" style="text-align:center;">
-      <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 <span class="tag">${d.address.match(/\((.*?)\)/)[1]}</span></div>
+      <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 <span class="tag">${dong}</span></div>
       <p><b>고객</b>: ${d.name}</p>
       <p><b>전화번호</b>: ${d.phone}</p>
       <p><b>주소</b>: ${d.address}</p>
@@ -132,28 +119,28 @@ function openCard(d,order){
     </div>`;
   card.classList.add('active');
 }
-function closeCard(){document.getElementById('customerCard').classList.remove('active');}
+function closeCard(){ customerCard.classList.remove('active'); }
 
-// 사진촬영 후 마커 투명화
 function capturePhoto(id,address){
   const input=document.createElement('input');
-  input.type='file';input.accept='image/*';input.capture='environment';
+  input.type='file'; input.accept='image/*'; input.capture='environment';
   input.onchange=e=>{
-    const f=e.target.files&&e.target.files[0];if(!f)return;
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
     alert(`📸 전송 완료\n주소:${address}\n운송장:${id}`);
-    const mk=markerById[id];if(mk)mk.getContent().style.opacity='0.4';
+    const today=new Date().toISOString().slice(0,10);
+    const completed=JSON.parse(localStorage.getItem('completed')||'[]');
+    completed.push({id,address,date:today,photo:true});
+    localStorage.setItem('completed', JSON.stringify(completed));
+    const mk=markerById[id]; if(mk) mk.getContent().style.opacity='0.4';
     closeCard();
   };
   input.click();
 }
-
-// 카카오네비 연동
 function startNavi(lat,lng,encodedName){
   location.href=`https://map.kakao.com/link/to/${encodedName},${lat},${lng}`;
 }
-window.capturePhoto=capturePhoto;
-window.closeCard=closeCard;
-window.startNavi=startNavi;
+
+window.closeCard=closeCard; window.capturePhoto=capturePhoto; window.startNavi=startNavi;
 </script>
 </body>
 </html>
