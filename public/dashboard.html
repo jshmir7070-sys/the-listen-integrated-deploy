@@ -1,69 +1,65 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>대시보드 - The Listen</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>The Listen - 로그인</title>
 <style>
-  body{margin:0;background:#f5f7fa;font-family:"Noto Sans KR",sans-serif}
-  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:700}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:720px;margin:16px auto;padding:12px}
-  .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 26px rgba(0,0,0,.06)}
-  .title{font-weight:900;margin-bottom:6px}
-  .small{color:#6b7280;margin-bottom:8px}
-  .btn{display:inline-block;background:#007bff;color:#fff;border:none;border-radius:10px;padding:10px 12px;text-decoration:none;font-weight:700}
-  .row{display:flex;justify-content:space-between;align-items:center}
-  .num{font-weight:900;font-size:20px}
+  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
+  .wrap{max-width:420px;margin:60px auto;padding:20px}
+  .logo{
+    font-size:44px;font-weight:900;text-align:center;
+    background:linear-gradient(90deg,#007bff,#00b4d8);
+    -webkit-background-clip:text;color:transparent;
+    margin-bottom:14px;
+  }
+  .sub{color:#6b7280;text-align:center;margin-bottom:24px;font-size:15px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:22px}
+  label{display:block;font-weight:700;margin-bottom:6px}
+  input[type="text"],input[type="password"]{
+    width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px;outline:none
+  }
+  .chk{display:flex;align-items:center;margin:8px 0;gap:6px;font-size:14px}
+  .btn{width:100%;background:#007bff;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer}
+  .links{display:flex;justify-content:space-between;margin-top:12px}
+  .links a{color:#007bff;text-decoration:none;font-weight:700}
 </style>
 </head>
 <body>
-<header>두번째 페이지 · 대시보드</header>
-<div class="grid">
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="title">현재 지도보기(배송중)</div>
-        <div class="small">배송중 UI에서는 “배송 수량”만 표기 · 클릭시 지도 연결</div>
+  <div class="wrap">
+    <div class="logo">The Listen</div>
+    <div class="sub">AI·GPS 기반 배송 어플</div>
+    <div class="card">
+      <label>아이디</label>
+      <input id="loginId" type="text" placeholder="아이디 입력" />
+      <label>비밀번호</label>
+      <input id="loginPw" type="password" placeholder="비밀번호 입력" />
+      <div class="chk">
+        <input id="saveId" type="checkbox" /> <label for="saveId">아이디 저장</label>
       </div>
-      <div class="num" id="inProgressCnt">0</div>
+      <button class="btn" onclick="login()">로그인</button>
+      <div class="links">
+        <a href="signup.html">회원가입</a>
+        <div>
+          <a href="find_id.html" style="margin-right:10px;">아이디찾기</a>
+          <a href="find_pw.html">비밀번호찾기</a>
+        </div>
+      </div>
     </div>
-    <a class="btn" href="map.html">현재 지도보기</a>
   </div>
-
-  <div class="card">
-    <div class="title">배송출발</div>
-    <div class="small">스캔 잡은 수량만 표기 · 연결페이지 구성</div>
-    <div class="row"><div>스캔 수량</div><div class="num" id="scannedCnt">0</div></div>
-    <a class="btn" href="map.html">배송출발 → 지도</a>
-  </div>
-
-  <div class="card">
-    <div class="title">배송완료</div>
-    <div class="small">클릭시 별도 페이지 이동 · 완료 카드/사진 확인(당일분만)</div>
-    <div class="row"><div>당일 완료</div><div class="num" id="completedCnt">0</div></div>
-    <a class="btn" href="completed.html">완료 내역 보기</a>
-  </div>
-
-  <div class="card">
-    <div class="title">실적 조회</div>
-    <div class="small">일/월 단위 · 달력 날자 클릭시 완료건 확인 · 월료 표기</div>
-    <a class="btn" href="stats.html">실적 조회</a>
-  </div>
-
-  <div class="card">
-    <div class="title">어플 사용 방법</div>
-    <div class="small">앱 소개/회사 설명 연결 페이지</div>
-    <a class="btn" href="howto.html">안내 보기</a>
-  </div>
-</div>
 <script>
-  // 데모 카운트: map.html에서 localStorage로 완료/스캔 수량을 관리한다고 가정
-  const completed = JSON.parse(localStorage.getItem('completed')||'[]');
-  const scanned = Number(localStorage.getItem('scanned')||'0');
-  const totalDeliveries = Number(localStorage.getItem('totalDeliveries')||'200');
-  document.getElementById('completedCnt').innerText = completed.filter(x=>x.date===new Date().toISOString().slice(0,10)).length;
-  document.getElementById('scannedCnt').innerText = scanned;
-  document.getElementById('inProgressCnt').innerText = Math.max(totalDeliveries - completed.length, 0);
+window.onload=function(){
+  const saved=localStorage.getItem('savedId');
+  if(saved){ document.getElementById('loginId').value=saved; document.getElementById('saveId').checked=true; }
+}
+function login(){
+  const id=document.getElementById('loginId').value;
+  const pw=document.getElementById('loginPw').value;
+  if(!id||!pw){alert("아이디와 비밀번호를 입력하세요.");return;}
+  if(document.getElementById('saveId').checked) localStorage.setItem('savedId',id);
+  else localStorage.removeItem('savedId');
+  location.href='dashboard.html';
+}
 </script>
 </body>
 </html>
-
