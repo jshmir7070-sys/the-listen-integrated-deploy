@@ -13,7 +13,7 @@ app.get("/", (req, res) => {
 
 // 로그인 처리 (간단히 구현)
 app.get("/login", (req, res) => {
-  res.redirect("/main.html"); // 로그인 후 메인화면 이동
+  res.sendFile(path.join(__dirname, "public", "main.html"));
 });
 
 // 서버 실행
