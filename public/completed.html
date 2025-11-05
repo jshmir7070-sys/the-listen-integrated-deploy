@@ -2,10 +2,10 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>배송완료 확인 - The Listen</title>
+<title>배송완료 - The Listen</title>
 <style>
   body{margin:0;background:#f7f9fc;font-family:"Noto Sans KR",sans-serif}
-  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:700}
+  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:800}
   .wrap{max-width:780px;margin:16px auto;padding:12px}
   .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 10px 26px rgba(0,0,0,.06);margin-bottom:10px}
   .row{display:flex;justify-content:space-between}
@@ -15,20 +15,16 @@
 <header>배송완료(당일)</header>
 <div class="wrap" id="list"></div>
 <script>
-const today = new Date().toISOString().slice(0,10);
-const completed = (JSON.parse(localStorage.getItem('completed')||'[]')).filter(x=>x.date===today);
-const $list = document.getElementById('list');
-if(completed.length===0){ $list.innerHTML='<div class="card">당일 완료 건이 없습니다.</div>'; }
-else{
-  $list.innerHTML = completed.map(c=>`
+const today=new Date().toISOString().slice(0,10);
+const completed=(JSON.parse(localStorage.getItem('completed')||'[]')).filter(x=>x.date===today);
+const $list=document.getElementById('list');
+$list.innerHTML = (completed.length===0) ? '<div class="card">당일 완료 건이 없습니다.</div>'
+  : completed.map(c=>`
     <div class="card">
-      <div class="row"><div><b>운송장</b> ${c.id}</div><div>${c.date}</div></div>
+      <div class="row"><div><b>운송장</b> ${c.id||'-'}</div><div>${c.date}</div></div>
       <div><b>주소</b> ${c.address}</div>
-      <div style="margin-top:6px;color:#6b7280;">사진 확인: 업로드됨(데모)</div>
-    </div>
-  `).join('');
-}
+      <div style="margin-top:6px;color:#6b7280;">사진 전송: ${c.photo?'완료':'-'}</div>
+    </div>`).join('');
 </script>
 </body>
 </html>
-
