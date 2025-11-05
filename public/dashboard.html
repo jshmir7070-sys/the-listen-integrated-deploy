@@ -1,70 +1,71 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>대시보드 - The Listen</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Listen - 대시보드</title>
 <style>
-  body{margin:0;background:#f5f7fa;font-family:"Noto Sans KR",sans-serif}
-  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:700}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:720px;margin:16px auto;padding:12px}
-  .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 26px rgba(0,0,0,.06)}
-  .title{font-weight:900;margin-bottom:6px}
-  .small{color:#6b7280;margin-bottom:8px}
-  .btn{display:inline-block;background:#007bff;color:#fff;border:none;border-radius:10px;padding:10px 12px;text-decoration:none;font-weight:700}
-  .row{display:flex;justify-content:space-between;align-items:center}
-  .num{font-weight:900;font-size:20px}
+  body { margin:0; font-family:"Noto Sans KR",sans-serif; background:#f9fafb; color:#111; }
+  header { background:#007bff; color:white; padding:16px; text-align:center; font-size:20px; font-weight:700; }
+  .wrap { max-width:480px; margin:0 auto; padding:20px; }
+  .section { background:#fff; border-radius:12px; padding:18px; margin-bottom:14px; box-shadow:0 2px 6px rgba(0,0,0,.05); }
+  .section h2 { margin:0 0 10px 0; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
+  .count { font-weight:800; color:#007bff; }
+  button { width:100%; background:#007bff; color:white; border:none; border-radius:10px; padding:12px; margin-top:8px; font-size:15px; cursor:pointer; }
+  button:active { background:#005fcc; }
+  footer { text-align:center; margin-top:30px; color:#777; font-size:13px; }
+  .icon-btn { font-size:22px; cursor:pointer; }
+  .barcode-input { display:flex; gap:8px; margin-top:10px; }
+  input[type="text"] { flex:1; padding:10px; border-radius:8px; border:1px solid #ccc; font-size:14px; }
 </style>
 </head>
 <body>
-<header>대시보드</header>
-<div class="grid">
-  <!-- 1) 배송출발 -->
-  <div class="card">
-    <div class="title">배송출발</div>
-    <div class="small">UI에서는 <b>스캔 잡은 수량만 표기</b> · 별도 페이지(고객카드/네비/스캔)</div>
-    <div class="row"><div>스캔 수량</div><div class="num" id="scannedCnt">0</div></div>
-    <a class="btn" href="depart.html">배송출발 페이지로</a>
+<header>🚛 The Listen 대시보드</header>
+<div class="wrap">
+
+  <!-- 배송출발 -->
+  <div class="section">
+    <h2>🚚 배송출발 <span class="count">12건</span></h2>
+    <div class="barcode-input">
+      <input type="text" placeholder="운송장번호 입력 또는 스캔" />
+      <span class="icon-btn">📸</span>
+      <span class="icon-btn">🔍</span>
+    </div>
+    <button onclick="alert('최적 경로 계산 중... (카카오내비 연결)')">🗺 최적 경로 설정</button>
+    <button onclick="alert('배송 출발 준비 완료!')">출발하기 🚚</button>
   </div>
 
-  <!-- 2) 배송중 -->
-  <div class="card">
-    <div class="title">배송중 (현재 지도보기)</div>
-    <div class="small">UI에서는 <b>배송 수량만 표기</b> · 클릭 시 지도 페이지 연결</div>
-    <div class="row"><div>진행 중</div><div class="num" id="inProgressCnt">0</div></div>
-    <a class="btn" href="map.html">현재 지도보기</a>
+  <!-- 배송중 -->
+  <div class="section">
+    <h2>📦 배송중 <span class="count">7건</span></h2>
+    <button onclick="location.href='map.html'">🗺 현재 지도 보기</button>
   </div>
 
-  <!-- 3) 배송완료 -->
-  <div class="card">
-    <div class="title">배송완료</div>
-    <div class="small">클릭 시 별도 페이지 이동 · <b>당일 완료</b> 고객카드/사진 확인</div>
-    <div class="row"><div>당일 완료</div><div class="num" id="completedCnt">0</div></div>
-    <a class="btn" href="completed.html">완료 내역 보기</a>
+  <!-- 배송완료 -->
+  <div class="section">
+    <h2>✅ 배송완료 <span class="count">18건</span></h2>
+    <button onclick="alert('완료 고객정보 카드로 이동합니다.')">📋 완료내역 보기</button>
   </div>
 
-  <!-- 4) 실적 조회 -->
-  <div class="card">
-    <div class="title">실적 조회</div>
-    <div class="small">일/월 단위 · 달력 날짜 클릭 → 완료건 · 월료 표기</div>
-    <a class="btn" href="stats.html">실적 조회</a>
+  <!-- 실적 조회 -->
+  <div class="section">
+    <h2>📊 실적조회</h2>
+    <button onclick="alert('달력 로딩 중... 월별 실적 표시')">📅 달력 보기</button>
   </div>
 
-  <!-- 5) 어플 사용방법/회사 설명 -->
-  <div class="card">
-    <div class="title">어플 사용방법</div>
-    <div class="small">기능 및 회사 설명 페이지로 연결</div>
-    <a class="btn" href="howto.html">안내 보기</a>
-  </div>
 </div>
+<footer>© 2025 The Listen Logistics</footer>
+
 <script>
-  const completed = JSON.parse(localStorage.getItem('completed')||'[]');
-  const today = new Date().toISOString().slice(0,10);
-  const todayDone = completed.filter(x=>x.date===today).length;
-  const scanned = Number(localStorage.getItem('scanned')||'0');
-  const total = Number(localStorage.getItem('totalDeliveries')||'1'); // 지도에서 설정
-  document.getElementById('completedCnt').innerText = todayDone;
-  document.getElementById('scannedCnt').innerText = scanned;
-  document.getElementById('inProgressCnt').innerText = Math.max(total - todayDone, 0);
+// 후면카메라 테스트
+document.querySelectorAll('.icon-btn')[0].onclick = function(){
+  alert("📸 카메라 기능은 모바일에서 자동 실행됩니다.");
+};
+
+// 바코드 입력 테스트
+document.querySelectorAll('.icon-btn')[1].onclick = function(){
+  alert("🔍 블루투스 스캐너 또는 수동 입력창이 활성화됩니다.");
+};
 </script>
 </body>
 </html>
