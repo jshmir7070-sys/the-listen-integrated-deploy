@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
-  <title>🚚 The Listen - 실시간 배송 지도</title>
+  <title>🚚 The Listen - 실시간 배송 지도 (v3)</title>
   <style>
     html, body {
       margin: 0; padding: 0;
@@ -13,13 +13,9 @@
       background: #f4f7fb;
     }
 
-    #map {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
+    #map { width: 100%; height: 100%; position: relative; }
 
-    /* 고객 카드 슬라이드 */
+    /* 📱 고객 카드 패널 */
     #customer-panel {
       position: absolute;
       bottom: -100%;
@@ -29,10 +25,11 @@
       background: white;
       border-top-left-radius: 16px;
       border-top-right-radius: 16px;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.25);
       transition: bottom 0.4s ease;
       padding: 10px;
       overflow-y: auto;
+      z-index: 100;
     }
 
     #customer-panel.active {
@@ -80,12 +77,13 @@
 <body>
   <div id="map"></div>
 
-  <!-- 고객 카드 패널 -->
+  <!-- 하단 슬라이드 UI -->
   <div id="customer-panel">
     <div class="close-btn" onclick="hidePanel()">✕</div>
     <div id="panel-content"></div>
   </div>
 
+  <!-- Kakao Map -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
     const deliveries = [
@@ -96,12 +94,12 @@
       { name: "홍길동", phone: "010-5555-6666", apt: "래미안", dong: "202동", detail: "304호", address: "서울 송파구 올림픽로 326", lat: 37.5150, lng: 127.1065 }
     ];
 
-    const mapContainer = document.getElementById("map");
-    const map = new kakao.maps.Map(mapContainer, {
+    const map = new kakao.maps.Map(document.getElementById("map"), {
       center: new kakao.maps.LatLng(37.4979, 127.0276),
       level: 6
     });
 
+    // 🏢 동별 그룹핑
     const grouped = {};
     deliveries.forEach(d => {
       const key = `${d.apt}-${d.dong}`;
@@ -114,10 +112,10 @@
     for (const key in grouped) {
       const group = grouped[key];
       const first = group[0];
-      const markerPos = new kakao.maps.LatLng(first.lat, first.lng);
+      const pos = new kakao.maps.LatLng(first.lat, first.lng);
       const marker = new kakao.maps.Marker({
         map,
-        position: markerPos,
+        position: pos,
         title: `${first.apt} ${first.dong}`
       });
 
@@ -130,11 +128,12 @@
       const panel = document.getElementById("customer-panel");
       const content = document.getElementById("panel-content");
       const data = grouped[groupKey];
+      if (!data || data.length === 0) return;
 
       let html = `
         <div class="address-header">
           ${data[0].apt} ${data[0].dong}
-          <span>📦 잔여 ${data.length}건</span>
+          <span id="remain-${groupKey}">📦 잔여 ${data.length}건</span>
         </div>
       `;
 
@@ -151,41 +150,47 @@
       });
 
       content.innerHTML = html;
-      panel.classList.add("active");
+      panel.classList.add("active"); // 완전히 올라온 상태 유지
     }
 
     function hidePanel() {
-      document.getElementById("customer-panel").classList.remove("active");
+      const panel = document.getElementById("customer-panel");
+      panel.classList.remove("active");
     }
 
     function openCamera(groupKey, idx) {
       const input = document.getElementById(`file-${groupKey}-${idx}`);
       input.click();
+
       input.onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (ev) => {
           const preview = document.getElementById(`preview-${groupKey}-${idx}`);
+          const card = document.getElementById(`cust-${groupKey}-${idx}`);
           preview.src = ev.target.result;
           preview.style.display = "block";
-
-          const card = document.getElementById(`cust-${groupKey}-${idx}`);
           card.classList.add("done");
           card.querySelector("button").disabled = true;
 
-          // 그룹 내 배송완료 제거
-          const group = grouped[groupKey];
-          group.splice(idx, 1);
-          alert(`📦 ${card.querySelector("strong").innerText} 배송 완료!`);
+          // 그룹 내 고객 제거
+          grouped[groupKey].splice(idx, 1);
 
-          // 모든 고객 완료 시 핀 삭제
-          if (group.length === 0) {
+          // 잔여 수 업데이트
+          const remain = document.getElementById(`remain-${groupKey}`);
+          remain.textContent = `📦 잔여 ${grouped[groupKey].length}건`;
+
+          alert(`✅ ${card.querySelector("strong").innerText} 배송완료!`);
+
+          // 모든 고객 완료 시 핀 삭제 및 슬라이드 닫기
+          if (grouped[groupKey].length === 0) {
             markers[groupKey].marker.setMap(null);
             hidePanel();
           } else {
-            // 잔여건수 업데이트
-            document.querySelector(".address-header span").innerText = `📦 잔여 ${group.length}건`;
+            // 일부 남아 있으면 자동 닫기
+            hidePanel();
           }
         };
         reader.readAsDataURL(file);
