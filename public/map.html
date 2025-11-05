@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>현재 지도보기 - The Listen</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>현재 지도 - The Listen (시흥 테스트)</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
   header{background:#007bff;color:#fff;text-align:center;padding:10px;font-weight:800}
   #map{width:100%;height:90vh}
-  #customerCard{position:fixed;left:0;bottom:0;width:100%;background:#fff;border-top-left-radius:16px;border-top-right-radius:16px;box-shadow:0 -6px 20px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .35s;max-height:60vh;overflow-y:auto;z-index:9999}
+  #customerCard{
+    position:fixed;left:0;bottom:0;width:100%;background:#fff;
+    border-top-left-radius:16px;border-top-right-radius:16px;
+    box-shadow:0 -6px 20px rgba(0,0,0,.25);
+    transform:translateY(100%);
+    transition:transform .35s ease;max-height:60vh;overflow-y:auto;z-index:9999;
+  }
   #customerCard.active{transform:translateY(0)}
   .card-header{text-align:center;padding:12px;font-weight:900}
   .delivery-item{padding:12px 18px;border-top:1px solid #eee}
@@ -20,7 +27,7 @@
 </style>
 </head>
 <body>
-<header>현재 지도(시흥 · 동별 마커 · 사진전송 · 네비)</header>
+<header>현재 지도보기 (시흥 테스트 4가구)</header>
 <div id="map"></div>
 
 <div id="customerCard">
@@ -29,67 +36,91 @@
 </div>
 
 <script>
+// 지도 초기화
 const map = new kakao.maps.Map(document.getElementById("map"), {
-  center:new kakao.maps.LatLng(37.3789,126.8053), // 시흥 장현지구 근방
-  level:5
+  center: new kakao.maps.LatLng(37.3789, 126.8053),
+  level: 5
 });
-const geocoder=new kakao.maps.services.Geocoder();
-let myPosition=null; const markerById={}; let resolvedList=[]; let markersDrawn=false;
+const geocoder = new kakao.maps.services.Geocoder();
 
-// 내 위치 파란 점
-if(navigator.geolocation){
-  navigator.geolocation.watchPosition(pos=>{
-    myPosition=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
-    if(!window.myCircle){ window.myCircle=new kakao.maps.CustomOverlay({position:myPosition,content:'<div class="my-location-dot"></div>',map}); }
-    else window.myCircle.setPosition(myPosition);
-  },err=>console.warn('GPS:',err),{enableHighAccuracy:true});
+let myPosition = null;
+const markerById = {};
+let resolvedList = [];
+let markersDrawn = false;
+
+// GPS 내 위치 (파란 점)
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(pos => {
+    myPosition = new kakao.maps.LatLng(pos.coords.latitude, pos.coords.longitude);
+    if (!window.myCircle) {
+      window.myCircle = new kakao.maps.CustomOverlay({
+        position: myPosition,
+        content: '<div class="my-location-dot"></div>',
+        map
+      });
+    } else {
+      window.myCircle.setPosition(myPosition);
+    }
+  }, err => console.warn('GPS error:', err), {enableHighAccuracy: true});
 }
 
-// ★ 시흥 호반베르디움 더클래스(동·호) 4가구
+// 📦 테스트용 4가구 (시흥 호반베르디움더클래스)
 const base = "경기도 시흥시 수풀안길 19-30 호반베르디움더클래스아파트";
 const deliveriesRaw = [
-  {id:"HOVA-101-202", name:"고객1", phone:"010-1111-2222", address:`${base} (101동 202호)`, boxes:1},
-  {id:"HOVA-101-1505",name:"고객2", phone:"010-2222-3333", address:`${base} (101동 1505호)`, boxes:2},
-  {id:"HOVA-102-403", name:"고객3", phone:"010-3333-4444", address:`${base} (102동 403호)`, boxes:1},
-  {id:"HOVA-105-303", name:"고객4", phone:"010-4444-5555", address:`${base} (105동 303호)`, boxes:3},
+  {id:"HOVA1701-202", name:"고객A", phone:"010-1111-2222", address:`${base} 1701동 202호`, boxes:1},
+  {id:"HOVA1701-1505",name:"고객B", phone:"010-2222-3333", address:`${base} 1701동 1505호`, boxes:2},
+  {id:"HOVA1702-403", name:"고객C", phone:"010-3333-4444", address:`${base} 1702동 403호`, boxes:1},
+  {id:"HOVA1705-303", name:"고객D", phone:"010-4444-5555", address:`${base} 1705동 303호`, boxes:3}
 ];
 
-function distKm(a,b,c,d){ const R=6371,dLat=(c-a)*Math.PI/180,dLng=(d-b)*Math.PI/180; const x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2; return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
+// 거리 계산 (Haversine)
+function distKm(a,b,c,d){const R=6371,dLat=(c-a)*Math.PI/180,dLng=(d-b)*Math.PI/180;
+ const x=Math.sin(dLat/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
+ return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
 
-// 주소→좌표
-let geocodeDone=0;
+// 주소 → 좌표 변환
+let done=0;
 deliveriesRaw.forEach(d=>{
   geocoder.addressSearch(d.address,(res,status)=>{
-    geocodeDone++;
-    if(status===kakao.maps.services.Status.OK && res[0]){ d.lat=+res[0].y; d.lng=+res[0].x; resolvedList.push(d); }
-    if(geocodeDone===deliveriesRaw.length) drawMarkersSorted();
+    done++;
+    if(status===kakao.maps.services.Status.OK && res[0]){
+      d.lat=+res[0].y; d.lng=+res[0].x; resolvedList.push(d);
+    }
+    if(done===deliveriesRaw.length) drawMarkersSorted();
   });
 });
 
 function drawMarkersSorted(){
   if(markersDrawn||resolvedList.length===0) return;
   let list=[...resolvedList];
-  if(myPosition){ const myLat=myPosition.getLat(), myLng=myPosition.getLng(); list.sort((a,b)=>distKm(myLat,myLng,a.lat,a.lng)-distKm(myLat,myLng,b.lat,b.lng)); }
+  if(myPosition){
+    const myLat=myPosition.getLat(), myLng=myPosition.getLng();
+    list.sort((a,b)=>distKm(myLat,myLng,a.lat,a.lng)-distKm(myLat,myLng,b.lat,b.lng));
+  }
   list.forEach((d,i)=>placeMarker(d,i+1));
   markersDrawn=true;
   localStorage.setItem('totalDeliveries', String(list.length));
 }
 
+// 마커 생성
 function placeMarker(d,order){
   const el=document.createElement('div');
-  el.style.cssText=`background:#007bff;color:#fff;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
+  el.style.cssText=`background:#007bff;color:#fff;border-radius:50%;width:30px;height:30px;
+    display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;
+    border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer;`;
   el.textContent=order;
   const overlay=new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(d.lat,d.lng),content:el,map});
   markerById[d.id]=overlay;
   el.addEventListener('click',()=>openCard(d,order));
 }
 
-function openCard(d,order){
+// 고객 카드 열기
+function openCard(d, order){
   const card=document.getElementById('customerCard'), box=document.getElementById('card-content');
-  const dong=(d.address.match(/\((.*?)\)/)||['',''])[1]||''; // "101동 202호"
   box.innerHTML=`
     <div class="delivery-item" style="text-align:center;">
-      <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 <span class="tag">${dong}</span></div>
+      <div style="font-size:1.05rem;font-weight:900;">${order}️⃣ 순번 
+        <span class="tag">${d.address.match(/(170\d동\s?\d+호)/)?.[1]||''}</span></div>
       <p><b>고객</b>: ${d.name}</p>
       <p><b>전화번호</b>: ${d.phone}</p>
       <p><b>주소</b>: ${d.address}</p>
@@ -103,10 +134,13 @@ function openCard(d,order){
     </div>`;
   card.classList.add('active');
 }
+
 function closeCard(){ document.getElementById('customerCard').classList.remove('active'); }
 
+// 사진 촬영/전송
 function capturePhoto(id,address){
-  const input=document.createElement('input'); input.type='file'; input.accept='image/*'; input.capture='environment';
+  const input=document.createElement('input');
+  input.type='file'; input.accept='image/*'; input.capture='environment';
   input.onchange=e=>{
     const f=e.target.files&&e.target.files[0]; if(!f) return;
     alert(`📸 전송 완료\n주소:${address}\n운송장:${id}`);
@@ -116,12 +150,18 @@ function capturePhoto(id,address){
     localStorage.setItem('completed', JSON.stringify(completed));
     const mk=markerById[id]; if(mk) mk.getContent().style.opacity='0.4';
     closeCard();
-  }; input.click();
+  };
+  input.click();
 }
 
-function startNavi(lat,lng,encodedName){ location.href=`https://map.kakao.com/link/to/${encodedName},${lat},${lng}`; }
+// 네비 연동
+function startNavi(lat,lng,encodedName){
+  location.href=`https://map.kakao.com/link/to/${encodedName},${lat},${lng}`;
+}
 
-window.closeCard=closeCard; window.capturePhoto=capturePhoto; window.startNavi=startNavi;
+window.closeCard=closeCard;
+window.capturePhoto=capturePhoto;
+window.startNavi=startNavi;
 </script>
 </body>
 </html>
