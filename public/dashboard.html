@@ -1,1 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>대시보드 - The Listen</title>
+<style>
+  body{margin:0;background:#f5f7fa;font-family:"Noto Sans KR",sans-serif}
+  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:720px;margin:16px auto;padding:12px}
+  .card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 10px 26px rgba(0,0,0,.06)}
+  .title{font-weight:900;margin-bottom:6px}
+  .small{color:#6b7280;margin-bottom:8px}
+  .btn{display:inline-block;background:#007bff;color:#fff;border:none;border-radius:10px;padding:10px 12px;text-decoration:none;font-weight:700}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .num{font-weight:900;font-size:20px}
+</style>
+</head>
+<body>
+<header>두번째 페이지 · 대시보드</header>
+<div class="grid">
+  <div class="card">
+    <div class="row">
+      <div>
+        <div class="title">현재 지도보기(배송중)</div>
+        <div class="small">배송중 UI에서는 “배송 수량”만 표기 · 클릭시 지도 연결</div>
+      </div>
+      <div class="num" id="inProgressCnt">0</div>
+    </div>
+    <a class="btn" href="map.html">현재 지도보기</a>
+  </div>
+
+  <div class="card">
+    <div class="title">배송출발</div>
+    <div class="small">스캔 잡은 수량만 표기 · 연결페이지 구성</div>
+    <div class="row"><div>스캔 수량</div><div class="num" id="scannedCnt">0</div></div>
+    <a class="btn" href="map.html">배송출발 → 지도</a>
+  </div>
+
+  <div class="card">
+    <div class="title">배송완료</div>
+    <div class="small">클릭시 별도 페이지 이동 · 완료 카드/사진 확인(당일분만)</div>
+    <div class="row"><div>당일 완료</div><div class="num" id="completedCnt">0</div></div>
+    <a class="btn" href="completed.html">완료 내역 보기</a>
+  </div>
+
+  <div class="card">
+    <div class="title">실적 조회</div>
+    <div class="small">일/월 단위 · 달력 날자 클릭시 완료건 확인 · 월료 표기</div>
+    <a class="btn" href="stats.html">실적 조회</a>
+  </div>
+
+  <div class="card">
+    <div class="title">어플 사용 방법</div>
+    <div class="small">앱 소개/회사 설명 연결 페이지</div>
+    <a class="btn" href="howto.html">안내 보기</a>
+  </div>
+</div>
+<script>
+  // 데모 카운트: map.html에서 localStorage로 완료/스캔 수량을 관리한다고 가정
+  const completed = JSON.parse(localStorage.getItem('completed')||'[]');
+  const scanned = Number(localStorage.getItem('scanned')||'0');
+  const totalDeliveries = Number(localStorage.getItem('totalDeliveries')||'200');
+  document.getElementById('completedCnt').innerText = completed.filter(x=>x.date===new Date().toISOString().slice(0,10)).length;
+  document.getElementById('scannedCnt').innerText = scanned;
+  document.getElementById('inProgressCnt').innerText = Math.max(totalDeliveries - completed.length, 0);
+</script>
+</body>
+</html>
 
