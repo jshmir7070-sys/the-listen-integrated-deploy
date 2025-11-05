@@ -1,38 +1,79 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Listen - AI 배송경로 200건 통합버전</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Listen - AI 배송경로 (고객카드 수정완료)</title>
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
   <style>
-    body { margin:0; font-family:"Noto Sans KR",sans-serif; background:#f7f9fc; }
-    header { background:#007bff; color:white; text-align:center; padding:12px; font-weight:600; font-size:1.2rem; }
-    #map { width:100%; height:90vh; }
-    #customerCard {
-      position:fixed; bottom:0; left:0; width:100%;
-      background:white; border-top-left-radius:16px; border-top-right-radius:16px;
-      box-shadow:0 -3px 10px rgba(0,0,0,0.25);
-      transform:translateY(100%); transition:transform .4s ease;
-      max-height:55vh; overflow-y:auto; z-index:1000;
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", sans-serif;
+      background: #f7f9fc;
     }
-    #customerCard.active { transform:translateY(0); }
-    .card-header { text-align:center; font-weight:700; padding:10px; }
-    .delivery-item { padding:12px 18px; border-bottom:1px solid #eee; }
+    header {
+      background: #007bff;
+      color: white;
+      text-align: center;
+      padding: 12px;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    #map {
+      width: 100%;
+      height: 90vh;
+    }
+    #customerCard {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: white;
+      border-top-left-radius: 16px;
+      border-top-right-radius: 16px;
+      box-shadow: 0 -3px 10px rgba(0, 0, 0, 0.25);
+      transform: translateY(100%);
+      transition: transform 0.4s ease;
+      max-height: 55vh;
+      overflow-y: auto;
+      z-index: 1000;
+    }
+    #customerCard.active {
+      transform: translateY(0);
+    }
+    .card-header {
+      text-align: center;
+      font-weight: 700;
+      padding: 10px;
+      color: #333;
+    }
+    .delivery-item {
+      padding: 12px 18px;
+      border-bottom: 1px solid #eee;
+    }
     .delivery-item button {
-      background:#007bff; color:white; border:none; border-radius:8px;
-      padding:8px 12px; cursor:pointer; margin-top:6px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      margin-top: 6px;
     }
     .my-location-dot {
-      width:12px; height:12px; background:rgba(0,123,255,.9);
-      border-radius:50%; border:2px solid white;
+      width: 12px;
+      height: 12px;
+      background: rgba(0, 123, 255, 0.9);
+      border-radius: 50%;
+      border: 2px solid white;
     }
   </style>
 </head>
 <body>
-  <header>🚚 The Listen AI 배송경로 (200건 테스트)</header>
+  <header>🚚 The Listen AI 배송경로 시스템 (고객카드 수정버전)</header>
   <div id="map"></div>
 
+  <!-- 고객카드 -->
   <div id="customerCard">
     <div class="card-header">고객 상세 정보</div>
     <div id="card-content"></div>
@@ -48,7 +89,7 @@
     let myPosition = null;
     const markerObjects = {};
 
-    // ✅ 실시간 GPS 추적
+    // ✅ 내 위치 (파란 점)
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(
         (pos) => {
@@ -59,7 +100,7 @@
             window.myCircle = new kakao.maps.CustomOverlay({
               position: myPosition,
               content: '<div class="my-location-dot"></div>',
-              map: map,
+              map: map
             });
           } else {
             window.myCircle.setPosition(myPosition);
@@ -70,65 +111,74 @@
       );
     }
 
-    // ✅ 200개 예시 데이터 생성
+    // ✅ 200개 예시 데이터
     const deliveries = Array.from({ length: 200 }).map((_, i) => ({
-      id: `B${String(i+1).padStart(3,'0')}`,
-      name: `고객${i+1}`,
-      phone: `010-${1000+i}-${2000+i}`,
-      address: `서울특별시 강남구 테헤란로 ${120+i}번길 10`,
-      boxes: Math.floor(Math.random()*3)+1
+      id: `B${String(i + 1).padStart(3, "0")}`,
+      name: `고객${i + 1}`,
+      phone: `010-${1000 + i}-${2000 + i}`,
+      address: `서울특별시 강남구 테헤란로 ${120 + i}번길 10`,
+      boxes: Math.floor(Math.random() * 3) + 1
     }));
 
     // ✅ 거리 계산 함수
-    function calcDistance(lat1,lng1,lat2,lng2){
-      const R=6371;
-      const dLat=(lat2-lat1)*Math.PI/180;
-      const dLng=(lng2-lng1)*Math.PI/180;
-      const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
-      return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    function calcDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+          Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     // ✅ 주소 → 좌표 변환 후 마커 생성
-    function drawMarkers(){
-      deliveries.forEach((d,i)=>{
-        geocoder.addressSearch(d.address,(result,status)=>{
-          if(status===kakao.maps.services.Status.OK){
-            const lat=Number(result[0].y);
-            const lng=Number(result[0].x);
-            d.lat=lat; d.lng=lng;
-            placeMarker(d,i+1);
+    function drawMarkers() {
+      deliveries.forEach((d, i) => {
+        geocoder.addressSearch(d.address, (result, status) => {
+          if (status === kakao.maps.services.Status.OK) {
+            const lat = Number(result[0].y);
+            const lng = Number(result[0].x);
+            d.lat = lat;
+            d.lng = lng;
+            placeMarker(d, i + 1);
           }
         });
       });
     }
 
-    // ✅ 마커 생성 및 클릭 이벤트
-    function placeMarker(d,order){
-      const markerEl=document.createElement("div");
-      markerEl.style.cssText=`
+    // ✅ 마커 생성 (클릭 이벤트 직접 부여)
+    function placeMarker(d, order) {
+      const markerEl = document.createElement("div");
+      markerEl.style.cssText = `
         background:#007bff;color:white;border-radius:50%;
         width:30px;height:30px;display:flex;align-items:center;
         justify-content:center;font-weight:600;font-size:13px;
         border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);
+        cursor:pointer;
       `;
-      markerEl.textContent=order;
+      markerEl.textContent = order;
 
-      const marker=new kakao.maps.CustomOverlay({
-        position:new kakao.maps.LatLng(d.lat,d.lng),
-        content:markerEl,map:map
+      const marker = new kakao.maps.CustomOverlay({
+        position: new kakao.maps.LatLng(d.lat, d.lng),
+        content: markerEl,
+        map: map
       });
-      markerObjects[d.id]=marker;
 
-      kakao.maps.event.addListener(marker,"click",()=>{
-        showCustomerCard(d,order);
+      markerObjects[d.id] = marker;
+
+      // ✅ 클릭 이벤트 직접 등록 (오버레이 클릭 안 먹는 문제 해결)
+      markerEl.addEventListener("click", () => {
+        showCustomerCard(d, order);
       });
     }
 
     // ✅ 고객카드 표시
-    function showCustomerCard(d,order){
-      const card=document.getElementById("customerCard");
-      const content=document.getElementById("card-content");
-      content.innerHTML=`
+    function showCustomerCard(d, order) {
+      const card = document.getElementById("customerCard");
+      const content = document.getElementById("card-content");
+      content.innerHTML = `
         <div style="text-align:center;">
           <h3>${order}️⃣ 순번</h3>
           <p><b>이름:</b> ${d.name}</p>
@@ -142,17 +192,17 @@
       card.classList.add("active");
     }
 
-    // ✅ 사진 촬영 후 배송완료 처리
-    function capturePhoto(id,address){
-      const input=document.createElement("input");
-      input.type="file";
-      input.accept="image/*";
-      input.capture="environment";
-      input.onchange=(e)=>{
-        if(e.target.files[0]){
-          alert(`📸 ${address}\n운송장 ${id} 전송 완료!`);
-          const marker=markerObjects[id];
-          if(marker){ marker.getContent().style.opacity="0.4"; }
+    // ✅ 사진촬영 후 투명화 처리
+    function capturePhoto(id, address) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.capture = "environment";
+      input.onchange = (e) => {
+        if (e.target.files[0]) {
+          alert(`📸 ${address}\n운송장 ${id} 사진 전송 완료!`);
+          const marker = markerObjects[id];
+          if (marker) marker.getContent().style.opacity = "0.4"; // 투명 처리
           document.getElementById("customerCard").classList.remove("active");
         }
       };
