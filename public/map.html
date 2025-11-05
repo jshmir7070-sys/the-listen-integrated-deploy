@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Listen - AI 배송경로</title>
-  <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
+  <title>The Listen - AI 배송경로 시스템</title>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <style>
     body {
       margin: 0;
       font-family: "Noto Sans KR", sans-serif;
-      background: #f7f9fc;
+      background: #f5f7fa;
     }
     header {
       background: #007bff;
@@ -23,14 +23,13 @@
       width: 100%;
       height: 90vh;
     }
-
-    /* 하단 고객 카드 슬라이드 */
+    /* 고객 카드 */
     #customerCard {
       position: fixed;
       bottom: 0;
       left: 0;
       width: 100%;
-      background: #fff;
+      background: white;
       border-top-left-radius: 16px;
       border-top-right-radius: 16px;
       box-shadow: 0 -2px 15px rgba(0, 0, 0, 0.25);
@@ -52,9 +51,6 @@
     .delivery-item {
       padding: 12px 18px;
       border-bottom: 1px solid #eee;
-    }
-    .delivery-item p {
-      margin: 3px 0;
     }
     .delivery-item button {
       background: #007bff;
@@ -86,17 +82,14 @@
   </div>
 
   <script>
-    // ✅ 지도 초기화
-    const mapContainer = document.getElementById("map");
-    const mapOption = {
+    const map = new kakao.maps.Map(document.getElementById("map"), {
       center: new kakao.maps.LatLng(37.4981, 127.0276),
-      level: 4
-    };
-    const map = new kakao.maps.Map(mapContainer, mapOption);
+      level: 5,
+    });
 
     let myPosition = null;
 
-    // ✅ 내 위치 실시간 표시 (파란 점)
+    // ✅ 내 위치 (파란 원)
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(
         (pos) => {
@@ -107,7 +100,7 @@
             window.myCircle = new kakao.maps.CustomOverlay({
               position: myPosition,
               content: '<div class="my-location-dot"></div>',
-              map: map
+              map: map,
             });
           } else {
             window.myCircle.setPosition(myPosition);
@@ -118,55 +111,84 @@
       );
     }
 
-    // ✅ 테스트용 동일 건물 내 여러 박스(운송장 중복)
+    // ✅ 테스트용 아파트 동별 데이터
     const deliveries = [
-      { id: "A001", name: "김지훈", phone: "010-1111-2222", address: "서울특별시 강남구 테헤란로 123 (101동 1502호)", lat: 37.4981, lng: 127.0276 },
-      { id: "A002", name: "김지훈", phone: "010-1111-2222", address: "서울특별시 강남구 테헤란로 123 (101동 1502호)", lat: 37.4981, lng: 127.0276 },
-      { id: "A003", name: "김지훈", phone: "010-1111-2222", address: "서울특별시 강남구 테헤란로 123 (101동 1502호)", lat: 37.4981, lng: 127.0276 },
-      { id: "A004", name: "박은지", phone: "010-3333-4444", address: "서울특별시 강남구 테헤란로 456 (103동 502호)", lat: 37.4990, lng: 127.0350 },
-      { id: "A005", name: "최성민", phone: "010-5555-6666", address: "서울특별시 서초구 서초대로 88 (303동 401호)", lat: 37.4928, lng: 127.0110 }
+      { id: "A001", name: "김지훈", phone: "010-1111-2222", address: "서울 강남구 푸르지오 101동", lat: 37.4981, lng: 127.0276 },
+      { id: "A002", name: "박은지", phone: "010-3333-4444", address: "서울 강남구 푸르지오 102동", lat: 37.4986, lng: 127.0280 },
+      { id: "A003", name: "최성민", phone: "010-5555-6666", address: "서울 강남구 푸르지오 103동", lat: 37.4990, lng: 127.0285 },
+      { id: "A004", name: "이수빈", phone: "010-7777-8888", address: "서울 강남구 푸르지오 104동", lat: 37.4994, lng: 127.0290 },
+      { id: "A005", name: "정다혜", phone: "010-1212-3434", address: "서울 강남구 푸르지오 105동", lat: 37.4998, lng: 127.0295 },
+      { id: "A006", name: "조현우", phone: "010-9090-8080", address: "서울 강남구 푸르지오 106동", lat: 37.5002, lng: 127.0300 },
     ];
 
-    // ✅ 동일 주소지 병합
-    const grouped = deliveries.reduce((acc, d) => {
-      const key = d.address;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(d);
-      return acc;
-    }, {});
+    // ✅ 거리 계산 함수 (AI 순번용)
+    function calcDistance(lat1, lng1, lat2, lng2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLng = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
 
-    // ✅ 마커 표시
-    for (const [addr, group] of Object.entries(grouped)) {
-      const { lat, lng } = group[0];
-      const marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(lat, lng),
-        map: map
-      });
+    // ✅ 배송 순번 정렬
+    function sortByDistance() {
+      if (!myPosition) return deliveries;
+      return deliveries
+        .map((d) => ({
+          ...d,
+          dist: calcDistance(myPosition.getLat(), myPosition.getLng(), d.lat, d.lng),
+        }))
+        .sort((a, b) => a.dist - b.dist);
+    }
 
-      kakao.maps.event.addListener(marker, "click", () => {
-        showCustomerCard(addr, group);
+    const markerObjects = {};
+
+    // ✅ 마커 생성 및 순번 표시
+    function drawMarkers() {
+      const sorted = sortByDistance();
+      sorted.forEach((d, idx) => {
+        const order = idx + 1;
+        const markerEl = document.createElement("div");
+        markerEl.style.cssText = `
+          background:#007bff;color:white;border-radius:50%;width:28px;height:28px;
+          display:flex;align-items:center;justify-content:center;font-size:13px;
+          border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.2);
+        `;
+        markerEl.textContent = order;
+
+        const customMarker = new kakao.maps.CustomOverlay({
+          position: new kakao.maps.LatLng(d.lat, d.lng),
+          content: markerEl,
+          map: map,
+        });
+
+        markerObjects[d.id] = customMarker;
+
+        kakao.maps.event.addListener(customMarker, "click", () => {
+          showCustomerCard(d, order);
+        });
       });
     }
 
-    // ✅ 고객카드 표시
-    function showCustomerCard(address, group) {
+    // ✅ 고객카드
+    function showCustomerCard(data, order) {
       const card = document.getElementById("customerCard");
       const content = document.getElementById("card-content");
       content.innerHTML = `
         <div style="text-align:center;">
-          <h3>🏢 ${address}</h3>
-          <p><b>수령인:</b> ${group[0].name}</p>
-          <p><b>전화번호:</b> ${group[0].phone}</p>
-          <p><b>박스 수량:</b> ${group.length}개</p>
-          <p><b>운송장:</b> ${group.map(d => d.id).join(", ")}</p>
-          <button onclick="capturePhoto('${address}', '${group.map(d => d.id).join(', ')}', ${group.length})">📸 사진촬영 및 전송</button>
+          <h3>${order}️⃣ 순번 / ${data.address}</h3>
+          <p><b>운송장:</b> ${data.id}</p>
+          <p><b>수령인:</b> ${data.name}</p>
+          <p><b>전화번호:</b> ${data.phone}</p>
+          <button onclick="capturePhoto('${data.id}', '${data.address}')">📸 사진촬영 및 전송</button>
         </div>
       `;
       card.classList.add("active");
     }
 
-    // ✅ 사진촬영 기능 (모바일 카메라)
-    function capturePhoto(address, ids, boxCount) {
+    // ✅ 사진촬영 시 투명처리 + 완료알림
+    function capturePhoto(id, address) {
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/*";
@@ -174,12 +196,19 @@
       input.onchange = (e) => {
         const file = e.target.files[0];
         if (file) {
-          alert(`📸 ${address}\n운송장: ${ids}\n박스 ${boxCount}개 전송 완료!`);
+          alert(`📸 ${address}\n운송장 ${id} 전송 완료!`);
+          const marker = markerObjects[id];
+          if (marker) {
+            marker.getContent().style.opacity = "0.4"; // 투명 처리
+          }
           document.getElementById("customerCard").classList.remove("active");
         }
       };
       input.click();
     }
+
+    // 실행
+    setTimeout(drawMarkers, 1500);
   </script>
 </body>
 </html>
