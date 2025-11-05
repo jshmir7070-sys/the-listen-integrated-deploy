@@ -3,7 +3,7 @@ app:
   name: the-listen-integrated-deploy
   type: node
   build:
-    install:
+    commands:
       - npm install
   run:
     command: node index.js
