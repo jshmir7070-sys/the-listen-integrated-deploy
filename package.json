@@ -1,12 +1,13 @@
 {
   "name": "the-listen-integrated-deploy",
   "version": "1.0.0",
-  "description": "The Listen Cloudtype Node.js Server",
+  "description": "AI·GPS 기반 배송 최적화 로그인 페이지 서버",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "path": "^0.12.7"
   }
 }
