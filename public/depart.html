@@ -4,351 +4,99 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>배송출발 - The Listen</title>
-
-<!-- ZXing (브라우저용 바코드 스캐너) -->
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
-
 <style>
-  :root{
-    --brand:#007bff; --ink:#0f172a; --muted:#6b7280; --bg:#f7f9fc; --card:#ffffff;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif;color:var(--ink)}
-  header{
-    background:var(--brand);color:#fff;text-align:center;padding:12px 10px;
-    font-weight:900;letter-spacing:.2px
-  }
-
-  /* 비대칭 레이아웃: 좌(65%) 카메라 / 우(35%) 컨트롤 */
-  .wrap{max-width:1200px;margin:14px auto;padding:0 12px}
-  .grid{display:grid;grid-template-columns:minmax(480px, 1.4fr) minmax(320px, .8fr);gap:16px}
-
-  .card{background:var(--card);border-radius:16px;box-shadow:0 10px 28px rgba(0,0,0,.06);padding:16px}
-  h3{margin:4px 0 10px}
-  .muted{color:var(--muted);font-size:.92rem}
-
-  /* 카메라 프리뷰 */
-  .camWrap{position:relative;border-radius:14px;overflow:hidden;background:#000;min-height:280px}
-  video{width:100%;height:auto;display:block}
-  /* 얇은 인식 가이드 라인 */
-  .guide{
-    position:absolute;left:6%;right:6%;top:50%;transform:translateY(-50%);
-    height:2px;background:rgba(0,123,255,.95);box-shadow:0 0 12px rgba(0,123,255,.55)
-  }
-  .camBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-  .btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:10px 12px;cursor:pointer;font-weight:800}
-  .btn.gray{background:#64748b}
+  :root { --brand:#007bff; --bg:#f7f9fc; --card:#fff; }
+  body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
+  header{background:var(--brand);color:#fff;text-align:center;padding:12px;font-weight:900}
+  .wrap{max-width:420px;margin:auto;padding:10px}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 4px 14px rgba(0,0,0,.1);padding:14px;margin-bottom:10px}
+  .btn{display:block;width:100%;border:none;border-radius:10px;padding:12px;font-size:15px;font-weight:700;color:#fff;background:var(--brand);margin-top:6px;cursor:pointer}
   .btn.green{background:#10b981}
   .btn.orange{background:#f59e0b}
-  .btn:disabled{opacity:.4;cursor:not-allowed}
-
-  /* 우측 패널 */
-  .kpiBox{
-    display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px
-  }
-  .kpi{background:#f2f6ff;border-radius:12px;padding:10px 12px}
-  .kpi .label{color:#3563ff;font-size:.85rem}
-  .kpi .val{font-size:22px;font-weight:900}
-
-  .list{max-height:46vh;overflow:auto;border:1px dashed #e5e7eb;border-radius:12px;padding:8px;background:#fff}
-  .row{display:flex;gap:8px;margin:8px 0}
-  input[type="text"]{flex:1;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px}
-  .pill{display:inline-flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:999px;padding:6px 10px;margin:4px 6px 0 0}
-  .pill b{font-weight:800}
-  .pill .x{background:#ef4444;color:#fff;border:none;border-radius:8px;padding:2px 6px;cursor:pointer}
-
-  /* 고객카드 미리보기 (조남동 50명) */
-  details{margin-top:12px}
-  details summary{cursor:pointer;font-weight:800}
-  .cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;max-height:32vh;overflow:auto}
-  .cardMini{border:1px solid #e5e7eb;border-radius:12px;padding:10px}
-  .cardMini .ttl{font-weight:900}
-  .badge{display:inline-block;background:#eef4ff;color:#3563ff;padding:2px 8px;border-radius:999px;font-size:.8rem;margin-left:6px}
+  input[type="text"]{width:100%;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:15px}
+  video{width:100%;border-radius:10px;background:#000}
+  .list{max-height:160px;overflow:auto;margin-top:10px;border:1px solid #eee;border-radius:10px;padding:6px}
+  .pill{display:inline-block;background:#eef4ff;color:#007bff;border-radius:999px;padding:6px 10px;margin:4px;font-size:14px}
+  .kpi{display:flex;justify-content:space-between;margin:10px 0;font-weight:800}
 </style>
 </head>
 <body>
-<header>🚚 배송출발 · 카메라 스캔 + HID 스캐너 · 최적경로 · 출발전송</header>
-
+<header>🚚 배송출발 (스마트폰용)</header>
 <div class="wrap">
-  <div class="grid">
-    <!-- 좌: 카메라(크게) -->
-    <section class="card">
-      <h3>📸 후면 카메라 바코드 스캔</h3>
-      <div class="camWrap">
-        <video id="preview" muted playsinline></video>
-        <div class="guide"></div>
-      </div>
-      <div class="camBtns">
-        <button class="btn" id="btnStart">카메라 시작(후면)</button>
-        <button class="btn gray" id="btnStop">정지</button>
-        <button class="btn" id="btnTorch" style="display:none;">플래시 토글</button>
-      </div>
-      <p class="muted">가이드 라인 위로 바코드를 얇게 맞추면 인식률이 가장 좋습니다.</p>
-    </section>
+  <div class="card">
+    <video id="preview" playsinline muted></video>
+    <button class="btn" id="btnStart">📸 카메라 시작 (후면)</button>
+    <button class="btn" id="btnStop">⛔ 카메라 정지</button>
+  </div>
 
-    <!-- 우: 컨트롤 (좁게) -->
-    <aside class="card">
-      <h3>🔢 스캔/스캐너 입력 <span id="scanCount" style="font-weight:900">0</span> 건</h3>
+  <div class="card">
+    <div class="kpi"><span>스캔 수량</span><span id="scanCount">0</span></div>
+    <input id="scanInput" type="text" placeholder="운송장 입력 또는 HID 스캐너 입력" />
+    <button class="btn green" id="btnAdd">추가</button>
+    <div class="list" id="scanList"></div>
+  </div>
 
-      <div class="kpiBox">
-        <div class="kpi"><div class="label">스캔 수량</div><div class="val" id="kpiScan">0</div></div>
-        <div class="kpi"><div class="label">테스트 고객</div><div class="val" id="kpiCust">0</div></div>
-      </div>
-
-      <div class="row">
-        <input id="scanInput" type="text" placeholder="HID 스캐너/수기 입력(엔터)" />
-        <button class="btn" id="btnAdd">추가</button>
-      </div>
-
-      <div class="row">
-        <!-- 초기화 버튼 비활성화(요청사항) -->
-        <button class="btn gray" id="btnClear" disabled title="운영 안전을 위해 비활성화됨">초기화(비활성)</button>
-        <button class="btn green" id="btnOptimize">🧭 경로 최적화</button>
-        <button class="btn orange" id="btnDispatch">🚀 출발 전송(지도로 이동)</button>
-      </div>
-
-      <div class="list" id="pillList" aria-label="스캔 목록"></div>
-
-      <details id="custDetails" open>
-        <summary>👥 조남동 테스트 고객 50명 (미리보기)</summary>
-        <div class="row">
-          <button class="btn" id="btnSeed">테스트 고객 50명 다시 생성</button>
-          <button class="btn gray" id="btnShuffle">섞기</button>
-        </div>
-        <div class="cards" id="custCards"></div>
-      </details>
-
-      <p class="muted">경로 최적화 시 현재 위치 기준으로 고객카드에 <b>배송 순서 번호</b>가 부여됩니다. “출발 전송”을 누르면 <b>map.html</b>이 이 데이터를 불러와 마커와 고객카드를 표시합니다.</p>
-    </aside>
+  <div class="card">
+    <button class="btn orange" id="btnOptimize">🧭 경로 최적화</button>
+    <button class="btn green" id="btnDispatch">🚀 출발 전송 (지도 이동)</button>
   </div>
 </div>
 
 <script>
-/* ===========================
-   상태 저장소 (localStorage)
-   - scanList        : 스캔 운송장 배열
-   - scanned         : 스캔 개수(대시보드 연동)
-   - deliveriesJSON  : 지도에서 사용할 고객 데이터(위경도 포함)
-   - optimizeByGPS   : '1'이면 지도에서 GPS 기준 정렬
-   - startDispatch   : '1'이면 지도에서 출발 모드로 진입
-   =========================== */
-const $scanInput = document.getElementById('scanInput');
-const $scanCount = document.getElementById('scanCount');
-const $kpiScan   = document.getElementById('kpiScan');
-const $kpiCust   = document.getElementById('kpiCust');
-const $pillList  = document.getElementById('pillList');
-const $custCards = document.getElementById('custCards');
+const reader = new ZXing.BrowserMultiFormatReader();
+const video = document.getElementById("preview");
+const scanListDiv = document.getElementById("scanList");
+let scanList = JSON.parse(localStorage.getItem("scanList")||"[]");
 
-let scanList = JSON.parse(localStorage.getItem('scanList') || '[]');
-let customers = [];   // 조남동 50명 (위경도 포함)
-let optimized = false;
-
-/* ==============
-   도우미 함수
-   ============== */
-function saveScan(){
-  localStorage.setItem('scanList', JSON.stringify(scanList));
-  localStorage.setItem('scanned', String(scanList.length));
-}
-function renderScan(){
-  $pillList.innerHTML = scanList.map((code, i)=>`
-     <span class="pill"><b>${code}</b> <button class="x" onclick="rmScan(${i})">X</button></span>
-  `).join('') || '<div class="muted">스캔 내역이 없습니다.</div>';
-  $scanCount.textContent = scanList.length;
-  $kpiScan.textContent   = scanList.length;
-  saveScan();
-}
-function addScan(v){
-  v=(v||'').trim();
-  if(!v) return;
-  scanList.unshift(v);
-  renderScan();
-}
-function rmScan(i){
-  scanList.splice(i,1);
-  renderScan();
+function renderList(){
+  scanListDiv.innerHTML = scanList.map(s=>`<span class='pill'>${s}</span>`).join('');
+  document.getElementById('scanCount').textContent = scanList.length;
+  localStorage.setItem("scanList", JSON.stringify(scanList));
+  localStorage.setItem("scanned", String(scanList.length));
 }
 
-/* ===========================
-   1) ZXing 카메라 스캔
-   =========================== */
-const codeReader = new ZXing.BrowserMultiFormatReader();
-let currentStream=null, torchOn=false;
+document.getElementById('btnStart').onclick=()=>reader.decodeFromVideoDevice(null,video,(res,err)=>{if(res){scanList.unshift(res.text);renderList();}});
+document.getElementById('btnStop').onclick=()=>reader.reset();
+document.getElementById('btnAdd').onclick=()=>{const v=scanInput.value.trim();if(v){scanList.unshift(v);renderList();scanInput.value='';}};
+scanInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElementById('btnAdd').click();}});
 
-async function startCamera(){
-  try{
-    const devices=await ZXing.BrowserCodeReader.listVideoInputDevices();
-    const backId = devices.find(d=>/back|후면|environment/i.test(d.label))?.deviceId || devices?.[devices.length-1]?.deviceId;
-    const v=document.getElementById('preview');
-    await codeReader.decodeFromVideoDevice(backId, v, (result, err)=>{
-      if(result){ addScan(result.getText()); }
-    });
-    currentStream=v.srcObject;
-    const track=currentStream?.getVideoTracks?.()[0];
-    document.getElementById('btnTorch').style.display = (track?.getCapabilities?.().torch ? 'inline-block' : 'none');
-  }catch(e){
-    console.warn(e);
-    alert('카메라 권한을 허용해 주세요.');
+// 고객 50명 생성
+function makeCustomers(){
+  const baseLat=37.3795, baseLng=126.8060;
+  const arr=[];
+  for(let i=1;i<=50;i++){
+    const [lat,lng]=[baseLat+(Math.random()-0.5)*0.01, baseLng+(Math.random()-0.5)*0.01];
+    arr.push({id:"JONAM"+i, name:"조남고객"+i, phone:"010-0000-"+(1000+i),
+      address:`경기도 시흥시 조남동 ${100+Math.floor(i/10)}동 ${100+i}호`,
+      boxes:1+(i%3), lat,lng});
   }
+  return arr;
 }
-function stopCamera(){
-  codeReader.reset();
-  const v=document.getElementById('preview');
-  const s=v.srcObject; if(s){ s.getTracks().forEach(t=>t.stop()); v.srcObject=null; }
-  currentStream=null;
-}
-function toggleTorch(){
-  const track=currentStream?.getVideoTracks?.()[0]; if(!track) return;
-  const caps=track.getCapabilities?.(); if(!caps?.torch) return;
-  torchOn=!torchOn; track.applyConstraints({advanced:[{torch:torchOn}]});
-}
+let customers = makeCustomers();
 
-/* ===========================
-   2) 조남동 50명 테스트 고객
-   - 위경도 포함(무작위 분포)
-   - 최초 진입 시 자동 생성
-   =========================== */
-function randomAround(lat, lng, meter){
-  // meter 반경 내 무작위 좌표
-  const r = meter/111300; // ≈ m to deg
-  const u = Math.random(); const v = Math.random();
-  const w = r * Math.sqrt(u);
-  const t = 2 * Math.PI * v;
-  const latOff = w * Math.cos(t);
-  const lngOff = w * Math.sin(t) / Math.cos(lat * Math.PI/180);
-  return [lat+latOff, lng+lngOff];
-}
-// 조남동 중심(시흥 장현지구 근방 대략값)
-const JONAM_CENTER = { lat: 37.3795, lng: 126.8060 };
-
-function seedCustomers(count=50){
-  const list=[];
-  for(let i=1;i<=count;i++){
-    const dong = 100 + Math.floor(Math.random()*6);   // 100~105동 느낌
-    const ho   = 101 + Math.floor(Math.random()*1500); // 임의 호수
-    const [lat,lng] = randomAround(JONAM_CENTER.lat, JONAM_CENTER.lng, 600); // 600m 반경
-    list.push({
-      id:`JONAM-${dong}-${ho}`,
-      name:`조남고객${i}`,
-      phone:`010-${String(1000+i).padStart(4,'0')}-${String(2000+i).padStart(4,'0')}`,
-      address:`경기도 시흥시 조남동 (테스트) ${dong}동 ${ho}호`,
-      boxes: 1 + (i%3),
-      lat, lng,
-      order: null // 최적화 후 부여
-    });
-  }
-  return list;
-}
-function renderCustomerPreview(){
-  $kpiCust.textContent = customers.length;
-  $custCards.innerHTML = customers.slice(0,12).map(c=>`
-    <div class="cardMini">
-      <div class="ttl">${c.name} <span class="badge">${c.address.match(/(\d+동 \d+호)/)?.[1]||''}</span></div>
-      <div class="muted">운송장: ${c.id}</div>
-      <div class="muted">좌표: ${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}</div>
-      <div class="muted">박스: ${c.boxes}개</div>
-      <div class="muted">순번: ${c.order??'-'}</div>
-    </div>
-  `).join('') || '<div class="muted">고객 데이터가 없습니다.</div>';
-}
-function initCustomers(){
-  const cached = localStorage.getItem('deliveriesJSON');
-  if(cached){
-    try{
-      customers = JSON.parse(cached);
-      // 좌표가 없는 이전 형식이면 새로 시드
-      if(!Array.isArray(customers) || !customers[0]?.lat){ customers = seedCustomers(50); }
-    }catch{ customers = seedCustomers(50); }
-  }else{
-    customers = seedCustomers(50);
-  }
-  renderCustomerPreview();
-}
-
-/* ===========================
-   3) 경로 최적화 (Haversine)
-   - 현재 위치 기준 가까운 순으로 order 부여
-   =========================== */
-function distKm(a,b,c,d){
-  const R=6371, dLat=(c-a)*Math.PI/180, dLng=(d-b)*Math.PI/180;
-  const x=Math.sin(dLat/2)**2 + Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dLng/2)**2;
-  return R*2*Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
-}
-function optimizeByGPS(){
-  if(!navigator.geolocation){
-    alert('GPS가 지원되지 않습니다. 브라우저 권한을 확인하세요.');
-    return;
-  }
+function optimize(){
+  if(!navigator.geolocation) return alert('GPS 불가');
   navigator.geolocation.getCurrentPosition(pos=>{
-    const myLat=pos.coords.latitude, myLng=pos.coords.longitude;
-    customers.sort((a,b)=>distKm(myLat,myLng,a.lat,a.lng)-distKm(myLat,myLng,b.lat,b.lng));
-    customers.forEach((c,idx)=>c.order = idx+1);
-    optimized = true;
-    alert('🧭 현재 위치 기준으로 배송 순서가 생성되었습니다.');
-    renderCustomerPreview();
-  }, err=>{
-    console.warn(err);
-    alert('GPS 위치를 가져올 수 없습니다. 권한을 허용해 주세요.');
-  }, {enableHighAccuracy:true});
+    const [a,b]=[pos.coords.latitude,pos.coords.longitude];
+    const dist=(x1,y1)=>Math.hypot(x1-a,y1-b);
+    customers.sort((x,y)=>dist(x.lat,x.lng)-dist(y.lat,y.lng));
+    customers.forEach((c,i)=>c.order=i+1);
+    localStorage.setItem('deliveriesJSON',JSON.stringify(customers));
+    localStorage.setItem('optimizeByGPS','1');
+    alert('🧭 GPS 기준으로 경로 정렬 완료');
+  });
 }
+document.getElementById('btnOptimize').onclick=optimize;
 
-/* ===========================
-   4) 출발 전송 → map.html 연동
-   - deliveriesJSON 저장
-   - optimizeByGPS, startDispatch 플래그 설정
-   =========================== */
-function dispatchToMap(){
-  // 스캔 수량 반영
-  localStorage.setItem('scanned', String(scanList.length));
-  // 고객 데이터 저장
-  localStorage.setItem('deliveriesJSON', JSON.stringify(customers));
-  // 지도에서 GPS 정렬 사용여부
-  localStorage.setItem('optimizeByGPS', optimized ? '1' : '0');
-  // 출발 모드
-  localStorage.setItem('startDispatch', '1');
-  // 총 건수(대시보드용)
-  localStorage.setItem('totalDeliveries', String(customers.length));
-
-  alert('🚀 출발 전송되었습니다. 지도 화면에서 경로/고객카드를 확인하세요.');
-  location.href = 'map.html';
-}
-
-/* ===========================
-   이벤트 바인딩 / 초기화
-   =========================== */
-document.getElementById('btnStart').onclick  = startCamera;
-document.getElementById('btnStop').onclick   = stopCamera;
-document.getElementById('btnTorch').onclick  = toggleTorch;
-
-document.getElementById('btnAdd').onclick    = ()=>{ addScan($scanInput.value); $scanInput.value=''; $scanInput.focus(); };
-$scanInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ addScan($scanInput.value); $scanInput.value=''; }});
-
-document.getElementById('btnOptimize').onclick = optimizeByGPS;
-document.getElementById('btnDispatch').onclick = dispatchToMap;
-
-document.getElementById('btnSeed').onclick = ()=>{
-  customers = seedCustomers(50);
-  optimized = false;
-  renderCustomerPreview();
-  alert('조남동 테스트 고객 50명이 새로 생성되었습니다.');
-};
-document.getElementById('btnShuffle').onclick = ()=>{
-  customers.sort(()=>Math.random()-0.5);
-  customers.forEach(c=>c.order=null);
-  optimized=false;
-  renderCustomerPreview();
+document.getElementById('btnDispatch').onclick=()=>{
+  localStorage.setItem('deliveriesJSON',JSON.stringify(customers));
+  localStorage.setItem('startDispatch','1');
+  alert('🚀 출발 전송 완료 → 지도 페이지로 이동합니다.');
+  location.href='map.html';
 };
 
-function boot(){
-  renderScan();
-  initCustomers();
-  // HID 스캐너 포커스 유지(사용자 편의)
-  setInterval(()=>{ if(document.activeElement!==$scanInput) $scanInput.focus(); }, 1500);
-}
-boot();
-
-// 전역 제거용(필요 시 디버깅)
-// window._dump = ()=>({scanList, customers});
+renderList();
 </script>
 </body>
 </html>
