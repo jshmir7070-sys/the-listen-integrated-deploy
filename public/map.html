@@ -2,11 +2,15 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🚚 The Listen - AI·GPS 배송경로 지도</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>🚚 The Listen - AI·GPS 배송지도</title>
   <style>
-    body {
+    html, body {
       margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       font-family: 'Noto Sans KR', sans-serif;
       background-color: #f5f5f5;
     }
@@ -14,13 +18,18 @@
       background-color: #007bff;
       color: white;
       text-align: center;
-      padding: 16px 0;
+      padding: 14px 0;
       font-size: 1.4rem;
       font-weight: 600;
+      position: relative;
+      z-index: 10;
     }
     #map {
       width: 100%;
-      height: calc(100vh - 70px);
+      height: calc(100% - 60px); /* 헤더 제외 높이 */
+      position: absolute;
+      top: 60px;
+      left: 0;
     }
     .label {
       background: white;
@@ -28,17 +37,17 @@
       border-radius: 5px;
       padding: 2px 6px;
       font-size: 12px;
+      white-space: nowrap;
     }
   </style>
 </head>
 <body>
-  <header>🚛 The Listen AI·GPS 배송경로 지도</header>
+  <header>🚛 The Listen AI·GPS 배송지도</header>
   <div id="map"></div>
 
   <!-- ✅ Kakao Map SDK -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
   <script>
-    // 예시 배송지 데이터 (테스트용)
     const deliveryPoints = [
       { name: "서울 시청", lat: 37.5665, lng: 126.9780 },
       { name: "강남역", lat: 37.4979, lng: 127.0276 },
@@ -53,48 +62,28 @@
         level: 7
       };
 
-      // 지도 생성
       const map = new kakao.maps.Map(mapContainer, mapOption);
-
-      // 마커 및 경로 좌표 저장
-      const linePath = [];
       const bounds = new kakao.maps.LatLngBounds();
 
+      // 🔹 마커만 표시 (경로선 완전 제거)
       deliveryPoints.forEach((point, idx) => {
         const position = new kakao.maps.LatLng(point.lat, point.lng);
-
-        // 마커 생성
         const marker = new kakao.maps.Marker({
           map: map,
           position: position
         });
 
-        // 라벨 추가
         const overlay = new kakao.maps.CustomOverlay({
           position: position,
           content: `<div class="label">${idx + 1}. ${point.name}</div>`,
           yAnchor: 2
         });
         overlay.setMap(map);
-
-        linePath.push(position);
         bounds.extend(position);
       });
 
-      // 경로 폴리라인 표시
-      const polyline = new kakao.maps.Polyline({
-        path: linePath,
-        strokeWeight: 4,
-        strokeColor: "#007bff",
-        strokeOpacity: 0.8,
-        strokeStyle: "solid"
-      });
-      polyline.setMap(map);
-
-      // 지도 범위 자동조정
+      // 범위 자동조정
       map.setBounds(bounds);
-
-      console.log("✅ 배송 경로 지도 로드 완료!");
     };
   </script>
 </body>
