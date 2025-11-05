@@ -5,54 +5,139 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>The Listen - 로그인</title>
 <style>
-  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
-  .wrap{max-width:420px;margin:40px auto;padding:20px}
-  .logo{
-    font-size:34px;font-weight:900;letter-spacing:0.5px;
-    background:linear-gradient(90deg,#007bff,#00b4d8);
-    -webkit-background-clip:text;background-clip:text;color:transparent;
-    text-align:center;margin-bottom:14px;
+  body {
+    margin: 0;
+    font-family: "Noto Sans KR", sans-serif;
+    background: #f7f9fc;
   }
-  .sub{color:#6b7280;text-align:center;margin-bottom:24px}
-  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:22px}
-  .row{margin-bottom:14px}
-  label{display:block;font-weight:700;margin-bottom:6px}
-  input[type="text"],input[type="password"]{
-    width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:10px;
-    font-size:15px;outline:none
+  .wrap {
+    max-width: 420px;
+    margin: 70px auto;
+    padding: 20px;
   }
-  .btn{width:100%;background:#007bff;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer}
-  .links{display:flex;justify-content:space-between;margin-top:12px}
-  .links a{color:#007bff;text-decoration:none;font-weight:700}
+  .logo {
+    font-size: 46px;
+    font-weight: 900;
+    text-align: center;
+    background: linear-gradient(90deg, #007bff, #00b4d8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  .sub {
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 15px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+  }
+  .chk {
+    display: flex;
+    align-items: center;
+    margin: 10px 0;
+    gap: 6px;
+    font-size: 14px;
+  }
+  .btn {
+    width: 100%;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  .links {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .links a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 700;
+  }
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="logo">The Listen</div>
     <div class="sub">AI·GPS 기반 배송 어플</div>
+
     <div class="card">
-      <div class="row">
-        <label>아이디</label>
-        <input id="loginId" type="text" placeholder="아이디" />
+      <label for="loginId">아이디</label>
+      <input id="loginId" type="text" placeholder="아이디 입력" />
+
+      <label for="loginPw">비밀번호</label>
+      <input id="loginPw" type="password" placeholder="비밀번호 입력" />
+
+      <div class="chk">
+        <input id="saveId" type="checkbox" />
+        <label for="saveId">아이디 저장</label>
       </div>
-      <div class="row">
-        <label>비밀번호</label>
-        <input id="loginPw" type="password" placeholder="비밀번호" />
-      </div>
-      <button class="btn" onclick="go()">로그인</button>
+
+      <button type="button" class="btn" onclick="login()">로그인</button>
+
       <div class="links">
         <a href="signup.html">회원가입</a>
         <div>
-          <a href="find_id.html" style="margin-right:12px;">아이디찾기</a>
+          <a href="find_id.html" style="margin-right: 10px;">아이디찾기</a>
           <a href="find_pw.html">비밀번호찾기</a>
         </div>
       </div>
     </div>
   </div>
+
 <script>
-function go(){
-  // 실제 인증 로직 대신 데모로 바로 대시보드 이동
-  location.href = 'dashboard.html';
+/* --- 저장된 아이디 불러오기 --- */
+window.onload = function() {
+  const savedId = localStorage.getItem('savedId');
+  if (savedId) {
+    document.getElementById('loginId').value = savedId;
+    document.getElementById('saveId').checked = true;
+  }
+};
+
+/* --- 로그인 기능 --- */
+function login() {
+  const id = document.getElementById('loginId').value.trim();
+  const pw = document.getElementById('loginPw').value.trim();
+  const save = document.getElementById('saveId').checked;
+
+  if (!id || !pw) {
+    alert('아이디와 비밀번호를 모두 입력하세요.');
+    return;
+  }
+
+  // 아이디 저장 설정
+  if (save) localStorage.setItem('savedId', id);
+  else localStorage.removeItem('savedId');
+
+  // 로그인 성공 (임시 로직)
+  alert(`환영합니다, ${id}님!`);
+  window.location.href = 'dashboard.html';
 }
 </script>
 </body>
