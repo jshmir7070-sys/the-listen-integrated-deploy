@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Listen - 배송 경로 지도</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Listen - 배송경로 지도</title>
   <style>
     body {
       margin: 0;
@@ -14,7 +14,7 @@
       background-color: #007bff;
       color: white;
       text-align: center;
-      padding: 16px 0;
+      padding: 15px 0;
       font-size: 1.4rem;
       font-weight: 600;
     }
@@ -25,37 +25,33 @@
   </style>
 </head>
 <body>
-  <header>🚚 The Listen 배송 경로 지도</header>
+  <header>🚚 The Listen 배송경로 지도</header>
   <div id="map"></div>
 
-  <!-- ✅ Kakao Map JS SDK -->
+  <!-- ✅ 카카오맵 SDK (테스트용 키로 교체 가능) -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=1e3c021083458339854b888af0db0328"></script>
-
   <script>
     // 지도 초기화
-    var mapContainer = document.getElementById('map');
-    var mapOption = {
-      center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청
-      level: 7
-    };
-    var map = new kakao.maps.Map(mapContainer, mapOption);
+    window.onload = function () {
+      const mapContainer = document.getElementById('map');
+      const mapOption = {
+        center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 중심
+        level: 6
+      };
+      const map = new kakao.maps.Map(mapContainer, mapOption);
 
-    // 테스트용 배송지 좌표
-    const points = [
-      { title: '배송지 1', lat: 37.5665, lng: 126.9780 },
-      { title: '배송지 2', lat: 37.5700, lng: 126.9825 },
-      { title: '배송지 3', lat: 37.5640, lng: 126.9900 },
-    ];
-
-    // 마커 표시
-    points.forEach(p => {
-      new kakao.maps.Marker({
-        map,
-        position: new kakao.maps.LatLng(p.lat, p.lng),
-        title: p.title
+      // 기본 마커 표시
+      const marker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(37.5665, 126.9780),
+        map: map
       });
-    });
+
+      // 간단한 정보창 표시
+      const info = new kakao.maps.InfoWindow({
+        content: '<div style="padding:5px;">📦 The Listen<br>AI-GPS 배송경로 시스템</div>'
+      });
+      info.open(map, marker);
+    };
   </script>
 </body>
 </html>
-
