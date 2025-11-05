@@ -1,25 +1,26 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>The Listen 배송경로 지도</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🚚 The Listen - 배송경로 지도</title>
   <style>
     body {
       margin: 0;
       font-family: 'Noto Sans KR', sans-serif;
+      background-color: #f5f5f5;
     }
     header {
       background-color: #007bff;
       color: white;
       text-align: center;
-      padding: 16px;
+      padding: 16px 0;
+      font-size: 1.4rem;
       font-weight: 600;
-      font-size: 1.2rem;
     }
     #map {
       width: 100%;
-      height: calc(100vh - 60px);
+      height: calc(100vh - 70px);
     }
   </style>
 </head>
@@ -27,22 +28,34 @@
   <header>🚛 The Listen 배송경로 지도</header>
   <div id="map"></div>
 
-  <!-- ✅ 카카오 지도 SDK (테스트용 키) -->
+  <!-- ✅ Kakao Map SDK -->
   <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03"></script>
-
   <script>
-    const container = document.getElementById('map');
-    const options = {
-      center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청 좌표
-      level: 4
-    };
-    const map = new kakao.maps.Map(container, options);
+    window.onload = function() {
+      const mapContainer = document.getElementById("map");
+      const mapOption = {
+        center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청 중심 좌표
+        level: 7 // 확대 단계 (1:가깝게 ~ 14:멀리)
+      };
 
-    // 마커 추가
-    const marker = new kakao.maps.Marker({
-      position: new kakao.maps.LatLng(37.5665, 126.9780),
-      map: map
-    });
+      // 지도 생성
+      const map = new kakao.maps.Map(mapContainer, mapOption);
+
+      // 중앙 마커 추가
+      const marker = new kakao.maps.Marker({
+        position: map.getCenter()
+      });
+      marker.setMap(map);
+
+      // 정보창 (마커 클릭 시)
+      const infowindow = new kakao.maps.InfoWindow({
+        content: '<div style="padding:5px;font-size:13px;">🚚 The Listen<br>AI-GPS 배송경로 시스템</div>'
+      });
+
+      kakao.maps.event.addListener(marker, 'click', function() {
+        infowindow.open(map, marker);
+      });
+    };
   </script>
 </body>
 </html>
