@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>The Listen - 로그인</title>
+<title>The Listen - 테스트 로그인</title>
 <style>
   body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
   .wrap{max-width:420px;margin:64px auto;padding:20px}
   .logo{
-    font-size:46px;font-weight:900;text-align:center;
+    font-size:48px;font-weight:900;text-align:center;
     background:linear-gradient(90deg,#007bff,#00b4d8);
-    -webkit-background-clip:text;-webkit-text-fill-color:transparent; margin-bottom:10px;
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    margin-bottom:10px;
   }
   .sub{color:#6b7280;text-align:center;margin-bottom:24px;font-size:15px}
   .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:24px}
@@ -20,45 +21,52 @@
   .btn{width:100%;background:#007bff;color:#fff;border:none;padding:12px;border-radius:10px;font-weight:700;cursor:pointer}
   .links{display:flex;justify-content:space-between;margin-top:14px;font-size:14px}
   .links a{color:#007bff;text-decoration:none;font-weight:700}
-  .hint{color:#64748b;margin-top:10px;font-size:13px}
+  .hint{color:#64748b;margin-top:10px;font-size:13px;text-align:center}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="logo">The Listen</div>
-    <div class="sub">AI·GPS 기반 배송 어플</div>
+    <div class="sub">AI·GPS 기반 배송 어플 (테스트용)</div>
+
     <div class="card">
       <label for="loginId">아이디</label>
-      <input id="loginId" type="text" placeholder="아이디 입력" />
+      <input id="loginId" type="text" placeholder="아이디 입력" value="1234" />
+
       <label for="loginPw">비밀번호</label>
-      <input id="loginPw" type="password" placeholder="비밀번호 입력" />
-      <div class="chk"><input id="saveId" type="checkbox" /><label for="saveId">아이디 저장</label></div>
+      <input id="loginPw" type="password" placeholder="비밀번호 입력" value="1234" />
+
+      <div class="chk">
+        <input id="saveId" type="checkbox" />
+        <label for="saveId">아이디 저장</label>
+      </div>
+
       <button type="button" class="btn" onclick="login()">로그인</button>
+
       <div class="links">
-        <a href="signup.html">회원가입</a>
+        <a href="#">회원가입</a>
         <div>
-          <a href="find_id.html" style="margin-right:10px;">아이디찾기</a>
-          <a href="find_pw.html">비밀번호찾기</a>
+          <a href="#">아이디찾기</a>
+          <a href="#" style="margin-left:10px;">비밀번호찾기</a>
         </div>
       </div>
-      <div class="hint">※ 테스트 배포용: 가입 정보는 브라우저 로컬에만 저장됩니다.</div>
+      <div class="hint">※ 테스트 로그인 고정계정: 1234 / 1234</div>
     </div>
   </div>
+
 <script>
-window.onload=function(){
-  const savedId=localStorage.getItem('savedId');
-  if(savedId){ loginId.value=savedId; saveId.checked=true; }
-};
+// ✅ 고정 테스트 계정 (로컬 스토리지 불필요)
 function login(){
-  const id=loginId.value.trim(), pw=loginPw.value.trim();
-  if(!id||!pw){ alert('아이디와 비밀번호를 모두 입력하세요.'); return; }
-  // 가입 계정 검증(로컬)
-  const users = JSON.parse(localStorage.getItem('users')||'[]');
-  const found = users.find(u=>u.id===id && u.pw===pw);
-  if(!found){ alert('가입정보가 없거나 비밀번호가 틀렸습니다. 회원가입 후 로그인하세요.'); return; }
-  if(saveId.checked) localStorage.setItem('savedId', id); else localStorage.removeItem('savedId');
-  localStorage.setItem('currentUser', JSON.stringify(found));
-  location.href='dashboard.html';
+  const id = document.getElementById('loginId').value.trim();
+  const pw = document.getElementById('loginPw').value.trim();
+
+  // 테스트용 계정 고정 (무조건 통과)
+  if(id === "1234" && pw === "1234"){
+    alert("✅ 테스트 로그인 성공! The Listen 대시보드로 이동합니다.");
+    location.href = "dashboard.html"; // 다음 페이지
+  } else {
+    alert("❌ 아이디 또는 비밀번호가 틀렸습니다.\n테스트용 계정: 1234 / 1234");
+  }
 }
 </script>
 </body>
