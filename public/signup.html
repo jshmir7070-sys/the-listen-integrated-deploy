@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>회원가입 - The Listen</title>
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<style>
+  body{margin:0;background:#f7f9fc;font-family:"Noto Sans KR",sans-serif}
+  .wrap{max-width:520px;margin:24px auto;padding:16px}
+  h1{text-align:center;margin:10px 0 18px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.06);padding:18px}
+  .row{margin-bottom:12px}
+  label{display:block;font-weight:700;margin-bottom:6px}
+  input,button{font-size:15px}
+  input[type="text"],input[type="password"],input[type="tel"]{
+    width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:10px
+  }
+  .flex{display:flex;gap:8px}
+  .btn{background:#007bff;color:#fff;border:none;padding:10px 12px;border-radius:10px;cursor:pointer}
+  .chk{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .foot{display:flex;justify-content:space-between;margin-top:12px}
+  a{color:#007bff;text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>회원가입</h1>
+  <div class="card">
+    <div class="row"><label>이름</label><input id="name" type="text" placeholder="홍길동" /></div>
+    <div class="row"><label>전화번호</label><input id="phone" type="tel" placeholder="010-0000-0000" /></div>
+
+    <div class="row"><label>주소</label>
+      <div class="flex">
+        <input id="postcode" type="text" placeholder="우편번호" readonly />
+        <button class="btn" onclick="findPost()">우편번호 검색</button>
+      </div>
+    </div>
+    <div class="row"><input id="addr1" type="text" placeholder="도로명 주소" readonly /></div>
+    <div class="row"><input id="addr2" type="text" placeholder="상세주소(동·호수 등)" /></div>
+
+    <div class="chk"><input id="smschk" type="checkbox" /> <label for="smschk">전화번호 인증에 동의합니다.</label></div>
+    <div class="chk"><input id="agre" type="checkbox" /> <label for="agre">개인정보 처리방침에 동의합니다.</label></div>
+
+    <div class="row"><label>아이디</label><input id="uid" type="text" placeholder="아이디" /></div>
+    <div class="row"><label>비밀번호</label><input id="upw" type="password" placeholder="비밀번호" /></div>
+
+    <div class="foot">
+      <a href="index.html">취소</a>
+      <button class="btn" onclick="submitJoin()">가입하기</button>
+    </div>
+  </div>
+</div>
+<script>
+function findPost(){
+  new daum.Postcode({
+    oncomplete: function(data){
+      document.getElementById('postcode').value = data.zonecode;
+      document.getElementById('addr1').value = data.roadAddress || data.jibunAddress;
+      document.getElementById('addr2').focus();
+    }
+  }).open();
+}
+function submitJoin(){
+  if(!document.getElementById('agre').checked){ alert('개인정보 동의가 필요합니다.'); return; }
+  alert('가입이 완료되었습니다. 로그인해 주세요.');
+  location.href='index.html';
+}
+</script>
+</body>
+</html>
 
