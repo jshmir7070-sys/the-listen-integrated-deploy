@@ -4,166 +4,100 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>배송출발 - The Listen</title>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
   :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;--muted:#6b7280;}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
   header{background:var(--brand);color:#fff;text-align:center;padding:12px;font-weight:900}
-  .wrap{max-width:480px;margin:0 auto;padding:12px}
+  .wrap{max-width:520px;margin:0 auto;padding:12px}
   .card{background:var(--card);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:14px;margin-bottom:12px}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:10px;padding:12px 14px;font-weight:800;color:#fff;background:var(--brand);cursor:pointer}
   .btn.full{width:100%}
   .btn.gray{background:#6b7280}
   .btn.green{background:#10b981}
   .btn.orange{background:#f59e0b}
-  .stack{display:flex;gap:8px}
-  .stack.col{flex-direction:column}
-  input[type="text"]{flex:1;padding:12px;border:1px solid #e5e7eb;border-radius:10px;font-size:15px}
-  video{width:100%;border-radius:12px;background:#000}
+  .row{display:flex;gap:8px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .kpi{display:flex;justify-content:space-between;margin:8px 0 2px;font-weight:900}
-  .muted{color:var(--muted);font-size:.9rem;margin:6px 0}
-  .pill{display:inline-block;background:#eef4ff;color:#3563ff;border-radius:999px;padding:6px 10px;margin:4px 6px 0 0;font-size:14px}
-  .list{max-height:180px;overflow:auto;border:1px solid #eef2f7;border-radius:10px;padding:8px}
-  .cards{max-height:420px;overflow:auto;border:1px solid #eef2f7;border-radius:12px;padding:8px}
+  .cards{max-height:520px;overflow:auto;border:1px solid #eef2f7;border-radius:12px;padding:8px}
   .citem{border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:8px}
-  .crow{display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .top{display:flex;justify-content:space-between;gap:8px;align-items:center}
   .order{min-width:36px;height:36px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900}
   .addr{font-size:.95rem}
-  .hit{outline:2px solid #10b981;box-shadow:0 0 0 4px rgba(16,185,129,.15)}
+  .muted{color:#6b7280}
+  .tile{border:2px dashed #c7d2fe;border-radius:12px;padding:12px;text-align:center;background:#eef2ff;cursor:pointer;font-weight:900}
 </style>
 </head>
 <body>
 <header>🚚 배송출발 (The Listen)</header>
 <div class="wrap">
 
-  <!-- 카메라 + 입력 + 추가 (하나의 UI 그룹) -->
-  <div class="card">
-    <div class="stack col">
-      <video id="preview" playsinline muted></video>
-      <div class="stack">
-        <button class="btn" id="btnStart">📸 후면카메라</button>
-        <input id="scanInput" type="text" placeholder="운송장 입력 또는 스캐너(Enter)" />
-        <button class="btn green" id="btnAdd">추가</button>
-      </div>
-      <div class="muted">후면 카메라 인식 + HID 스캐너 입력을 지원합니다.</div>
-    </div>
+  <!-- 최적경로: 터치 타일 -->
+  <div class="grid2" style="margin-bottom:10px;">
+    <div class="tile" id="tileOptimize">🧭 최적경로 설정</div>
+    <div class="tile" id="tileScanner">📸 스캐너/수기입력</div>
   </div>
 
-  <!-- 스캔 목록 -->
+  <!-- 고객카드 -->
   <div class="card">
-    <div class="kpi"><span>스캔 수량</span><span id="scanCount">0</span></div>
-    <div class="list" id="scanList" aria-label="스캔 목록"></div>
-  </div>
-
-  <!-- 고객카드(최대 1000개 스크롤) -->
-  <div class="card">
-    <div class="kpi"><span>고객 카드(조남동)</span><span id="custCount">0</span></div>
-    <div class="stack" style="gap:6px;margin-bottom:8px;">
-      <button class="btn orange full" id="btnOptimize">🧭 경로 최적화(순번 부여)</button>
-      <button class="btn full" id="btnDispatch">🚀 출발 전송 → 지도</button>
-      <button class="btn gray full" id="btnBack">⬅️ 뒤로가기</button>
-    </div>
+    <div class="kpi"><span>고객 카드</span><span id="custCount">0</span></div>
     <div class="cards" id="cards"></div>
-    <div class="muted">※ 순번은 GPS 거리 기준입니다. 출발 전송 시 map.html에 그대로 반영됩니다.</div>
+    <div class="muted" style="margin-top:8px;">※ 고객카드는 운송장/이름/주소만 노출됩니다. 전화는 아이콘으로만 연결됩니다.</div>
   </div>
 
+  <!-- 하단 버튼: 같은 줄 재배치 -->
+  <div class="row">
+    <button class="btn orange" style="flex:1" id="btnScanner">📸 스캐너/입력</button>
+    <button class="btn green" style="flex:1" id="btnDispatch">🚀 출발 전송 → 지도</button>
+  </div>
 </div>
 
 <script>
-/* ========== 상태 ========== */
-const reader=new ZXing.BrowserMultiFormatReader();
-const video=document.getElementById("preview");
-const scanListDiv=document.getElementById("scanList");
-const cardsDiv=document.getElementById("cards");
-let scanList=JSON.parse(localStorage.getItem("scanList")||"[]");
 let customers=[];
 
-/* ========== 스캔 UI ========== */
-function renderScan(){
-  scanListDiv.innerHTML=scanList.map(s=>`<span class="pill">${s}</span>`).join('') || '<div class="muted">스캔 내역이 없습니다.</div>';
-  document.getElementById('scanCount').textContent=scanList.length;
-  localStorage.setItem("scanList",JSON.stringify(scanList));
-  localStorage.setItem("scanned",String(scanList.length));
-}
-document.getElementById('btnStart').onclick=()=>{
-  reader.decodeFromVideoDevice(null,video,(res,err)=>{
-    if(res){ onScan(res.text); }
+// waybill & deliveries 병합
+function loadCustomers(){
+  const wb=JSON.parse(localStorage.getItem('waybillCustomers')||'[]'); // waybill 전용
+  const del=JSON.parse(localStorage.getItem('deliveriesJSON')||'[]');  // depart/map 공용
+  // merge by id (waybill 우선)
+  const map=new Map();
+  del.forEach(d=>map.set(d.id, d));
+  wb.forEach(w=>{
+    if(map.has(w.id)){
+      const old=map.get(w.id);
+      map.set(w.id, {...old, ...w}); // waybill 필드 덮어쓰기
+    } else {
+      // 좌표 없으면 임시 좌표 할당
+      map.set(w.id, {...w,
+        lat: 37.3795+(Math.random()-0.5)*0.01,
+        lng: 126.806+(Math.random()-0.5)*0.01,
+        order: null
+      });
+    }
   });
-};
-document.getElementById('btnAdd').onclick=()=>{
-  const v=scanInput.value.trim(); if(!v) return;
-  onScan(v); scanInput.value='';
-};
-scanInput.addEventListener('keydown',e=>{if(e.key==='Enter'){document.getElementById('btnAdd').click();}});
-
-/* ========== 고객 50명 자동 생성(조남동) ========== */
-function seedCustomers(n=50){
-  const baseLat=37.3795, baseLng=126.8060;
-  const arr=[];
-  for(let i=1;i<=n;i++){
-    const lat=baseLat+(Math.random()-0.5)*0.01;
-    const lng=baseLng+(Math.random()-0.5)*0.01;
-    const dong=100+Math.floor(i%20); // 100~119동 느낌
-    const ho=100+i;
-    arr.push({
-      id:`JONAM-${dong}-${ho}`,
-      name:`조남고객${i}`,
-      phone:`010-${String(1000+i).padStart(4,'0')}-${String(2000+i).padStart(4,'0')}`,
-      address:`경기도 시흥시 조남동 ${dong}동 ${ho}호`,
-      boxes:1+(i%3),
-      lat,lng,
-      order:null
-    });
-  }
-  return arr;
+  customers=[...map.values()];
 }
-function renderCards(focusId=null){
+
+// 렌더 (운송장/이름/주소 + 전화 아이콘)
+function render(){
   document.getElementById('custCount').textContent=customers.length;
-  cardsDiv.innerHTML=customers.map(c=>`
-    <div class="citem ${focusId&&focusId===c.id?'hit':''}" id="row-${c.id}">
-      <div class="crow">
+  const maskPhone=(p)=>p? (p.slice(0,3)+'-****-'+p.slice(-4)) : '';
+  const rows=customers.map((c,i)=>`
+    <div class="citem">
+      <div class="top">
         <div class="order">${c.order??'-'}</div>
         <div style="flex:1">
-          <div><b>${c.name}</b> · <span class="addr">${c.address}</span></div>
-          <div class="muted">운송장: ${c.id} · 📞 ${c.phone} · 📦 ${c.boxes}개</div>
+          <div><b>${c.name||'고객'}</b> · <span class="addr">${c.address||''}</span></div>
+          <div class="muted">📦 ${c.id||''}</div>
         </div>
+        ${c.phone?`<a href="tel:${c.phone}" title="전화걸기" style="text-decoration:none;font-size:20px">📞</a>`:''}
       </div>
     </div>
   `).join('');
-  if(focusId){
-    const el=document.getElementById(`row-${focusId}`);
-    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); }
-  }
-}
-function bootCustomers(){
-  customers=seedCustomers(50); // 최초 50명
-  renderCards();
+  document.getElementById('cards').innerHTML=rows || '<div class="muted">고객이 없습니다. 상단 또는 하단의 스캐너/입력 버튼을 눌러 추가하세요.</div>';
 }
 
-/* ========== 스캔 처리: 고객카드 매칭/활성화 ========== */
-function onScan(code){
-  scanList.unshift(code);
-  renderScan();
-  // 운송장으로 고객 찾기 (정확 일치, 없으면 일부 매칭)
-  let hit = customers.find(c=>c.id===code);
-  if(!hit){
-    const part = code.split('-').slice(0,3).join('-');
-    hit = customers.find(c=>c.id.includes(part));
-  }
-  if(hit){
-    // 강조 + 맨 위로 올리기(옵션)
-    customers = customers
-      .filter(c=>c.id!==hit.id)
-      .map(c=>({...c})) // 복제
-    customers.unshift(hit);
-    renderCards(hit.id);
-  } else {
-    alert(`고객을 찾지 못했습니다.\n(운송장: ${code})`);
-  }
-}
-
-/* ========== 경로 최적화(순번 부여) ========== */
+// 최적경로(순번 부여)
 function optimize(){
   if(!navigator.geolocation) return alert('GPS 권한을 허용해 주세요.');
   navigator.geolocation.getCurrentPosition(pos=>{
@@ -171,31 +105,30 @@ function optimize(){
     const dist=(x1,y1)=>Math.hypot(x1-a,y1-b);
     customers.sort((x,y)=>dist(x.lat,x.lng)-dist(y.lat,y.lng));
     customers.forEach((c,i)=>c.order=i+1);
-    localStorage.setItem('deliveriesJSON',JSON.stringify(customers));
-    localStorage.setItem('optimizeByGPS','1');
-    alert('🧭 GPS 기준으로 배송 순서(1~N)가 부여되었습니다.');
-    renderCards();
+    localStorage.setItem('deliveriesJSON', JSON.stringify(customers));
+    alert('🧭 GPS 기준으로 배송 순서가 부여되었습니다.');
+    render();
   },()=>alert('GPS 정보를 가져올 수 없습니다.'));
 }
 
-/* ========== 출발 전송(지도 연동) ========== */
-function dispatchToMap(){
-  localStorage.setItem('deliveriesJSON',JSON.stringify(customers));
+// 출발 전송 → map.html
+function dispatch(){
+  localStorage.setItem('deliveriesJSON', JSON.stringify(customers));
   localStorage.setItem('startDispatch','1');
   localStorage.setItem('totalDeliveries', String(customers.length));
-  alert('🚀 출발 전송 완료 → 지도 화면으로 이동합니다.');
   location.href='map.html';
 }
 
-/* ========== 뒤로가기 ========== */
-document.getElementById('btnOptimize').onclick=optimize;
-document.getElementById('btnDispatch').onclick=dispatchToMap;
-document.getElementById('btnBack').onclick=()=>history.back();
+// 이벤트
+document.getElementById('tileOptimize').onclick=optimize;
+document.getElementById('tileScanner').onclick=()=>location.href='waybill.html';
+document.getElementById('btnScanner').onclick=()=>location.href='waybill.html';
+document.getElementById('btnDispatch').onclick=dispatch;
 
-/* ========== 초기화 ========== */
+// 초기화
 (function init(){
-  renderScan();
-  bootCustomers();
+  loadCustomers();
+  render();
 })();
 </script>
 </body>
