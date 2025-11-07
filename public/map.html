@@ -19,8 +19,7 @@
   .btn.red{background:var(--danger)}
   .muted{color:var(--muted)}
   .flex{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-
-  /* 하단 카드 (동 그룹) */
+  /* 동 그룹 카드 */
   #card{position:fixed;left:0;bottom:0;width:100%;background:var(--card);border-radius:16px 16px 0 0;
         box-shadow:0 -4px 14px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .35s;z-index:3}
   #card.active{transform:translateY(0)}
@@ -32,8 +31,7 @@
   .badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:999px;
          color:#fff;font-weight:900;border:2px solid #fff;font-size:13px}
   .tel{color:var(--brand);text-decoration:none}
-
-  /* 상세 카드 (전체창) */
+  /* 상세 전체 창 */
   #detail{position:fixed;left:0;top:0;width:100%;height:100%;background:var(--card);
           box-shadow:0 -4px 16px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .35s;z-index:4;overflow-y:auto}
   #detail.active{transform:translateY(0)}
@@ -41,8 +39,12 @@
   textarea,input[type="text"]{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:14px}
   textarea:disabled,input:disabled{background:#f3f4f6;color:#6b7280}
   .section-title{font-weight:900;margin:10px 0 4px}
-  .thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-  .thumb img{width:48%;max-width:240px;height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+  /* 사진 비교 (좌우 대칭) */
+  .thumbs{display:flex;justify-content:space-around;align-items:flex-start;gap:10px;margin:10px 0}
+  .thumb-box{width:48%;text-align:center}
+  .thumb-box img{width:100%;max-width:240px;height:160px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+  .thumb-label{font-weight:700;margin:4px 0 2px}
+  /* 내 위치 */
   .my-location{width:12px;height:12px;background:rgba(0,123,255,.95);border-radius:50%;border:2px solid #fff}
 </style>
 </head>
@@ -50,31 +52,33 @@
 <header>🗺 실시간 지도 - The Listen</header>
 <div id="map"></div>
 
-<!-- 동 그룹 카드 -->
+<!-- 그룹 카드 -->
 <div id="card">
   <div class="card-inner">
     <div id="cardHead" class="title">고객 상세 정보</div>
     <div id="cardAddr" class="muted" style="text-align:center"></div>
-    <div class="section-title">동 내 고객 (고층 → 저층)</div>
+    <div class="section-title">동 내 고객 (고층→저층, 완료 하단)</div>
     <div id="groupList" class="list"></div>
     <div class="flex"><button class="btn gray" onclick="closeCard()">닫기</button></div>
   </div>
 </div>
 
-<!-- 고객 상세 전체창 -->
+<!-- 상세 카드 -->
 <div id="detail">
   <div class="detail-inner">
     <h2 id="detailTitle" style="text-align:center;margin-bottom:10px">고객 상세</h2>
     <div id="detailAddr" class="muted" style="text-align:center;margin-bottom:10px"></div>
 
-    <div class="section-title">📸 사진 비교 (당일 / 직전)</div>
+    <!-- 사진 비교 UI -->
+    <div class="section-title">📸 사진 비교 (금일 / 직전)</div>
     <div class="thumbs">
-      <img id="imgToday" alt="금일 없음">
-      <img id="imgPrev" alt="직전 없음">
+      <div class="thumb-box"><div class="thumb-label">금일</div><img id="imgToday" alt="금일 없음"></div>
+      <div class="thumb-box"><div class="thumb-label">직전</div><img id="imgPrev" alt="직전 없음"></div>
     </div>
 
+    <!-- 정보 입력 -->
     <div class="section-title">공동현관 비밀번호</div>
-    <input id="entCode" type="text" disabled placeholder="기사님 확인용 (수정 불가)" />
+    <input id="entCode" type="text" disabled placeholder="고객 제공 비밀번호 (읽기 전용)" />
 
     <div class="section-title">배송요청 메모</div>
     <textarea id="reqNote" rows="2" disabled placeholder="고객 요청사항 (읽기 전용)"></textarea>
@@ -94,63 +98,67 @@
 </div>
 
 <script>
-/** Kakao 지도 초기화 **/
-const map = new kakao.maps.Map(document.getElementById("map"), {
-  center: new kakao.maps.LatLng(37.3795,126.806),
-  level:5
+/* ===== Kakao Map Init ===== */
+const map = new kakao.maps.Map(document.getElementById("map"),{
+  center:new kakao.maps.LatLng(37.3795,126.806),level:5
 });
-
-/** 데이터 시드 **/
 let deliveries = JSON.parse(localStorage.getItem('deliveriesJSON')||'[]');
-if (!deliveries.length){
+if(!deliveries.length){
   const baseLat=37.3795, baseLng=126.806;
   deliveries = Array.from({length:10}).map((_,i)=>{
-    const d = 101+(i%3)*2, ho=1100-i*10;
+    const d=100+i, ho=1000+i;
     return {id:`TEST-${d}-${ho}`,name:`테스트${i+1}`,
-      phone:`0101234${1000+i}`,address:`경기도 시흥시 수풀안길19-30 ${d}동 ${ho}호`,
-      boxes:1+(i%3),lat:baseLat+(Math.random()-0.5)*0.01,lng:baseLng+(Math.random()-0.5)*0.01,order:i+1};
+    phone:`0101234${1000+i}`,address:`경기도 시흥시 수풀안길19-30 ${d}동 ${ho}호`,
+    boxes:1+(i%3),lat:baseLat+(Math.random()-0.5)*0.01,lng:baseLng+(Math.random()-0.5)*0.01,order:i+1};
   });
 }
 
-/** 내 위치 표시 **/
+/* ===== 내 위치 표시 ===== */
 let myCircle=null;
-if (navigator.geolocation){
+if(navigator.geolocation){
   navigator.geolocation.watchPosition(pos=>{
-    const now = new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
-    if(!myCircle)
-      myCircle=new kakao.maps.CustomOverlay({map,position:now,content:'<div class="my-location"></div>'});
+    const now=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
+    if(!myCircle) myCircle=new kakao.maps.CustomOverlay({map,position:now,content:'<div class="my-location"></div>'});
     else myCircle.setPosition(now);
   });
 }
 
-/** 유틸 **/
+/* ===== Address Parser ===== */
 function parseDongHo(addr=""){
   const n=addr.replace(/\s+/g,' ');
-  const m=n.match(/(\d+)\s*동[^0-9]*(\d+)\s*호/);
-  if(m) return {dong:m[1],ho:+m[2]||0};
+  // 1) 숫자형 동/호
+  let m=n.match(/(\d{1,4})\s*동[^0-9]*(\d{1,4})\s*호/);
+  if(m) return {dong:m[1],ho:+m[2]};
+  // 2) 하이픈 구분 (101-1505)
+  m=n.match(/(\d{3,4})\s*[-]\s*(\d{1,4})/);
+  if(m) return {dong:m[1],ho:+m[2]};
+  // 3) 문자형 A동 / 가동 등
+  m=n.match(/([A-Z가-힣]+)\s*동/);
+  if(m) return {dong:m[1],ho:0};
+  // 4) 대체
+  const nums=(n.match(/(\d{2,4})/g)||[]); if(nums.length>=2) return {dong:nums.at(-2),ho:+nums.at(-1)};
   return {dong:'0',ho:0};
 }
 const colorMap=new Map(),palette=["#007bff","#10b981","#f59e0b","#8b5cf6","#ef4444","#14b8a6","#f97316"];
-function colorForDong(d){if(!colorMap.has(d))colorMap.set(d,palette[(+d||d.length)%palette.length]);return colorMap.get(d);}
+function colorForDong(d){if(!colorMap.has(d))colorMap.set(d,palette[(d.charCodeAt(0)%palette.length)]);return colorMap.get(d);}
 const keyPhotos=id=>`photos_${id}`,keyNotes=id=>`notes_${id}`,keyComp='completed';
-const load=p=>JSON.parse(localStorage.getItem(p)||'[]');
-const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const load=p=>JSON.parse(localStorage.getItem(p)||'[]');const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 
-/** 마커 표시 **/
+/* ===== 마커 표시 ===== */
 const mkById={},bounds=new kakao.maps.LatLngBounds();
 deliveries.forEach(d=>{
-  const {dong}=parseDongHo(d.address),col=colorForDong(dong);
+  const {dong}=parseDongHo(d.address);const col=colorForDong(dong);
   const el=document.createElement('div');
   el.style.cssText=`width:30px;height:30px;background:${col};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid #fff;cursor:pointer`;
   el.textContent=d.order;
   const mk=new kakao.maps.CustomOverlay({map,position:new kakao.maps.LatLng(d.lat,d.lng),content:el});
   mkById[d.id]=mk;bounds.extend(new kakao.maps.LatLng(d.lat,d.lng));
-  const done=load(keyComp).some(x=>x.id===d.id);if(done)el.style.opacity="0.4";
-  el.addEventListener("click",()=>openCardForDong(d));
+  const done=load(keyComp).some(x=>x.id===d.id);if(done)el.style.opacity='0.4';
+  el.onclick=()=>openCardForDong(d);
 });
 if(!bounds.isEmpty())map.setBounds(bounds);
 
-/** 동 그룹 카드 **/
+/* ===== 그룹 카드 ===== */
 const card=document.getElementById('card'),cardHead=document.getElementById('cardHead'),cardAddr=document.getElementById('cardAddr'),groupList=document.getElementById('groupList');
 let currentDong=null,currentMain=null,currentGroup=[];
 function openCardForDong(d){
@@ -164,30 +172,24 @@ function openCardForDong(d){
     return hb-ha;
   });
   currentGroup=grp;
-  cardHead.textContent=`${dong}동 고객 (${grp.length}건)`;
-  cardAddr.textContent=d.address;
+  cardHead.textContent=`${dong}동 고객 (${grp.length}건)`;cardAddr.textContent=d.address;
   groupList.innerHTML=grp.map(x=>{
     const p=parseDongHo(x.address),col=colorForDong(p.dong);
     const ph=x.phone?x.phone.slice(0,3)+'-****-'+x.phone.slice(-4):'';
     const op=done.includes(x.id)?'opacity:.5;':'';
     return `<div class="item" data-id="${x.id}" style="${op}">
       <div class="line1"><span class="badge" style="background:${col}">${x.order}</span>
-      <div style="flex:1"><b>${x.name}</b> · ${p.dong}동 ${p.ho}호<br>
-      <span class="muted">📦${x.id} · ${ph}</span></div>
+      <div style="flex:1"><b>${x.name}</b> · ${p.dong}동 ${p.ho}호<br><span class="muted">📦${x.id} · ${ph}</span></div>
       ${x.phone?`<a class="tel" href="tel:${x.phone}">📞</a>`:''}</div></div>`;
   }).join('');
   groupList.querySelectorAll('.item').forEach(el=>{
-    el.onclick=()=>{
-      const id=el.dataset.id;
-      const t=currentGroup.find(v=>v.id===id);
-      if(t)openDetail(t);
-    };
+    el.onclick=()=>{const id=el.dataset.id;const t=currentGroup.find(v=>v.id===id);if(t)openDetail(t);};
   });
   card.classList.add('active');
 }
 function closeCard(){card.classList.remove('active');}
 
-/** 상세창 **/
+/* ===== 상세창 ===== */
 const detail=document.getElementById('detail'),imgToday=document.getElementById('imgToday'),imgPrev=document.getElementById('imgPrev');
 const entCode=document.getElementById('entCode'),reqNote=document.getElementById('reqNote'),driverReq=document.getElementById('driverReq'),driverNote=document.getElementById('driverNote');
 let sel=null;
@@ -208,7 +210,7 @@ function openDetail(c){
 }
 function closeDetail(){detail.classList.remove('active');}
 
-/** 사진 **/
+/* ===== 사진 ===== */
 function triggerPhoto(){
   if(!sel)return;
   const i=document.createElement('input');i.type='file';i.accept='image/*';i.capture='environment';
@@ -226,11 +228,10 @@ function triggerPhoto(){
   i.click();
 }
 
-/** 완료 **/
+/* ===== 완료 처리 ===== */
 function completeDelivery(){
   if(!sel)return;
-  const m=mkById[sel.id];
-  if(m)m.getContent().style.opacity="0.4";
+  const m=mkById[sel.id];if(m)m.getContent().style.opacity='0.4';
   const comp=load(keyComp);comp.push({id:sel.id,date:new Date().toISOString(),address:sel.address});
   save(keyComp,comp);
   alert('✅ 완료 처리되었습니다.');
