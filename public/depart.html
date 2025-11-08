@@ -7,7 +7,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
   :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;--muted:#6b7280;--border:#e5e7eb;}
-  *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
   header{background:var(--brand);color:#fff;text-align:center;padding:12px;font-weight:900}
   .wrap{max-width:520px;margin:0 auto;padding:12px}
@@ -25,8 +24,8 @@
 </head>
 <body>
 <header>🚚 배송출발 (The Listen)</header>
-
 <div class="wrap">
+
   <!-- 상단 대칭 3버튼 -->
   <div class="topbar">
     <button class="btn orange" id="btnScan">📦 운송장 스캔</button>
@@ -34,7 +33,6 @@
     <button class="btn blue"   id="btnDispatch">🚀 출발 전송</button>
   </div>
 
-  <!-- 고객 카드 -->
   <div class="card">
     <div class="kpi"><span>총 고객</span><span id="custCount">0</span></div>
     <div class="cards" id="cards"></div>
@@ -43,17 +41,16 @@
 </div>
 
 <script>
-/* ================= 상태 ================= */
-const cardsDiv = document.getElementById("cards");
-let customers = JSON.parse(localStorage.getItem("customers")||"[]");       // 작업 중 고객(최소필드)
-let waybillDetails = JSON.parse(localStorage.getItem("waybillDetails")||"{}"); // 운송장 상세 딕셔너리 {waybill:{...}}
-let scanEvents = JSON.parse(localStorage.getItem("scanEvents")||"[]");     // 화물추적용 스캔 로그
-let buffered = ""; // HID 스캐너 버퍼
+const cardsDiv=document.getElementById("cards");
+let customers=JSON.parse(localStorage.getItem("customers")||"[]");
+let waybillDetails=JSON.parse(localStorage.getItem("waybillDetails")||"{}");
+let scanEvents=JSON.parse(localStorage.getItem("scanEvents")||"[]");
+let buffer="";
 
-/* ================= 렌더 ================= */
+/* 렌더 */
 function render(){
-  document.getElementById('custCount').textContent = customers.length;
-  cardsDiv.innerHTML = customers.map(c=>`
+  document.getElementById('custCount').textContent=customers.length;
+  cardsDiv.innerHTML=customers.map(c=>`
     <div class="citem">
       <div class="crow">
         <div class="order">${c.order??'-'}</div>
@@ -63,134 +60,71 @@ function render(){
           <div class="muted">📦 ${c.boxes}박스</div>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-/* ================= 스캐너/입력 ================= */
-// waybill 입력 전용 페이지로 이동(숫자 키패드 + 카메라 아이콘)
-document.getElementById("btnScan").onclick = ()=> location.href="waybill.html";
-
-// HID 스캐너(엔터로 종료)
-window.addEventListener("keydown",(e)=>{
-  if(e.key === "Enter"){
-    const code = buffered.trim();
-    if(code){
-      handleWaybill(code,"depart-hid");
-    }
-    buffered = "";
-  }else{
-    // 일반 타이핑과 구분은 어렵지만, 실제 스캐너는 매우 빠르게 입력하므로 그대로 버퍼링
-    buffered += e.key;
-  }
+/* 스캐너 입력 */
+window.addEventListener("keydown",e=>{
+  if(e.key==="Enter"){ if(buffer.trim()) handleScan(buffer.trim(),"hid"); buffer=""; }
+  else buffer+=e.key;
 });
 
-/* ================= 운송장 처리 ================= */
-// 운송장 → 상세 생성(시뮬레이션) + 고객 병합 + 로그 기록
-function handleWaybill(waybill, source){
+/* 수동 이동 */
+document.getElementById("btnScan").onclick=()=>location.href="waybill.html";
+
+/* 운송장 처리 */
+function handleScan(code,src){
   playDing();
-  // (예시) 운송장 상세 샘플 생성. 실제에선 서버/DB에서 받은 DTO를 그대로 저장하면 됨.
-  if(!waybillDetails[waybill]){
-    const i = Object.keys(waybillDetails).length + 1;
-    waybillDetails[waybill] = {
-      waybill,
-      sender:{name:`발송인${i}`, phone:`02-1234-${String(1000+i)}`},
-      receiver:{name:`받는분${i}`, phone:`010-5555-${String(1000+i)}`, address:`경기 시흥시 조남동 ${100+(i%7)}동 ${300+i}호`},
-      product:{name:`상품${i}`, fragile: (i%5===0)},
-      route:{hub:"시흥HUB", path:["집하","허브","배송"]},
+  if(!waybillDetails[code]){
+    const i=Object.keys(waybillDetails).length+1;
+    waybillDetails[code]={
+      waybill:code,
+      sender:{name:`발송인${i}`,phone:`02-1${i}34-${1000+i}`},
+      receiver:{name:`고객${i}`,phone:`010-55${i}5-${2000+i}`,address:`경기 시흥시 조남동 ${100+(i%6)}동 ${300+i}호`},
+      product:{name:`상품${i}`},
+      route:{hub:"시흥HUB",path:["집하","허브","배송"]},
       scannedAt:new Date().toISOString()
     };
   }
-  // 화물추적 로그
-  scanEvents.push({code:waybill, time:new Date().toISOString(), source});
-  localStorage.setItem("scanEvents", JSON.stringify(scanEvents));
-  localStorage.setItem("waybillDetails", JSON.stringify(waybillDetails));
-
-  // 고객(최소정보) 병합
-  const d = waybillDetails[waybill].receiver;
-  const minimal = {
-    id: waybill,
-    name: d.name,
-    phone: d.phone,
-    address: d.address,
-    boxes: 1,
-    lat: 37.3795 + (Math.random()-0.5)*0.01, // 샘플 좌표
-    lng: 126.8060 + (Math.random()-0.5)*0.01,
-    order: null
-  };
-  mergeCustomer(minimal);
+  scanEvents.push({code,time:new Date().toISOString(),src});
+  localStorage.setItem("scanEvents",JSON.stringify(scanEvents));
+  localStorage.setItem("waybillDetails",JSON.stringify(waybillDetails));
+  const r=waybillDetails[code].receiver;
+  mergeCustomer({id:code,name:r.name,phone:r.phone,address:r.address,boxes:1,lat:37.3795+(Math.random()-0.5)*0.01,lng:126.806+(Math.random()-0.5)*0.01});
   render();
 }
 
-/* 이름/전화/주소 일치 2개 이상이면 동일 고객으로 병합 */
-function matchScore(a,b){
-  let s=0;
-  if(a.name && b.name && a.name===b.name) s++;
-  if(a.phone&& b.phone&&a.phone===b.phone) s++;
-  if(a.address&&b.address&&a.address===b.address) s++;
-  return s;
-}
-function mergeCustomer(newC){
-  let idx = customers.findIndex(c => matchScore(c,newC)>=2);
-  if(idx>=0){
-    customers[idx].boxes += newC.boxes;
-    // 운송장 식별자 연결을 위해 id 목록화를 원하면 아래처럼 확장 가능:
-    // customers[idx].waybills = [...new Set([...(customers[idx].waybills||[]), newC.id])]
-  }else{
-    customers.push(newC);
-  }
-  localStorage.setItem("customers", JSON.stringify(customers));
+/* 고객 병합 (2개 이상 일치) */
+function mergeCustomer(n){
+  const score=(a,b)=>['name','phone','address'].reduce((s,k)=>s+(a[k]&&b[k]&&a[k]===b[k]?1:0),0);
+  const i=customers.findIndex(c=>score(c,n)>=2);
+  if(i>=0) customers[i].boxes+=n.boxes; else customers.push(n);
+  localStorage.setItem("customers",JSON.stringify(customers));
 }
 
-/* ================= 최적 경로 ================= */
+/* 최적 경로 */
 function optimize(){
-  if(!navigator.geolocation) return alert("GPS 권한을 허용해주세요.");
-  navigator.geolocation.getCurrentPosition(pos=>{
-    const [a,b]=[pos.coords.latitude,pos.coords.longitude];
-    const dist=(x1,y1)=>Math.hypot(x1-a,y1-b);
-    customers.sort((x,y)=>dist(x.lat,x.lng)-dist(y.lat,ylng));
-  },err=>{}, {enableHighAccuracy:true});
-
-  // 위치미허용/테스트 대비: 박스 많은 순 → 이름순 등 임시 규칙
-  if(!customers.length) return;
+  if(!customers.length) return alert("고객이 없습니다.");
   customers.forEach((c,i)=>c.order=i+1);
-  localStorage.setItem("customers", JSON.stringify(customers));
-  alert("🧭 최적 경로 정렬 완료");
+  localStorage.setItem("customers",JSON.stringify(customers));
+  alert("🧭 최적경로 정렬 완료");
   render();
 }
 
-/* ================= 출발 전송 ================= */
+/* 출발 전송 */
 function dispatch(){
   if(!customers.length) return alert("전송할 고객이 없습니다.");
-  // 최소정보 payload
-  const payload = customers.map(c=>({
-    id: c.id,           // (병합 운송장 대표값)
-    name: c.name,
-    phone: c.phone,
-    address: c.address,
-    boxes: c.boxes,
-    lat: c.lat, lng: c.lng,
-    order: c.order
-  }));
-  localStorage.setItem("deliveriesJSON", JSON.stringify(payload));
+  localStorage.setItem("deliveriesJSON",JSON.stringify(customers));
   localStorage.setItem("startDispatch","1");
-
-  // depart 작업 공간 정리: 전송된 고객 삭제, 스캔 로그 유지
-  localStorage.removeItem("customers");
   alert("🚀 출발 데이터가 map.html로 전송되었습니다.");
+  localStorage.removeItem("customers");
   location.href="map.html";
 }
 
-/* ================= 효과음 ================= */
-function playDing(){
-  const a=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg"); a.play();
-}
-
-/* ================= 이벤트 바인딩 ================= */
+/* 효과음 */
+function playDing(){new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg").play();}
 document.getElementById("btnOptimize").onclick=optimize;
 document.getElementById("btnDispatch").onclick=dispatch;
-
-/* ================= 초기 렌더 ================= */
 render();
 </script>
 </body>
