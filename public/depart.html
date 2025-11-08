@@ -4,96 +4,146 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>배송출발 - The Listen</title>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
-  :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;--muted:#6b7280;--border:#e5e7eb}
+  :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;--muted:#6b7280;}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
   header{background:var(--brand);color:#fff;text-align:center;padding:12px;font-weight:900}
-  .wrap{max-width:520px;margin:0 auto;padding:12px}
-  .card{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:14px;margin-bottom:12px}
-  .btn{border:none;border-radius:10px;padding:12px 14px;font-weight:800;color:#fff;background:var(--brand);cursor:pointer}
-  .btn.full{width:100%} .btn.gray{background:#6b7280} .btn.green{background:#10b981} .btn.orange{background:#f59e0b}
-  .stack{display:flex;gap:8px;flex-wrap:wrap}
-  .list{max-height:440px;overflow:auto;border:1px solid var(--border);border-radius:12px;padding:8px}
-  .item{border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px}
-  .muted{color:var(--muted)}
-  .row{display:flex;align-items:center;gap:10px}
+  .wrap{max-width:480px;margin:0 auto;padding:12px}
+  .topbar{display:flex;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .btn{flex:1;text-align:center;padding:12px 0;font-weight:800;border:none;border-radius:10px;color:#fff;background:var(--brand);cursor:pointer}
+  .btn.orange{background:#f59e0b}
+  .btn.green{background:#10b981}
+  .btn.blue{background:#007bff}
+  .card{background:var(--card);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:14px;margin-bottom:12px}
+  .kpi{display:flex;justify-content:space-between;font-weight:900;margin-bottom:6px}
+  .cards{max-height:420px;overflow:auto;border:1px solid #e5e7eb;border-radius:12px;padding:8px}
+  .citem{border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:8px}
+  .crow{display:flex;justify-content:space-between;gap:8px;align-items:center}
   .order{min-width:36px;height:36px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900}
-  a.tel{color:#007bff;text-decoration:none}
+  .muted{color:#6b7280;font-size:.9rem}
 </style>
 </head>
 <body>
-<header>🚚 배송출발 (대시보드)</header>
+<header>🚚 배송출발 (The Listen)</header>
 <div class="wrap">
-
-  <div class="card">
-    <div class="stack">
-      <button class="btn orange full" onclick="location.href='waybill.html'">📸 운송장 스캔/입력 (이동)</button>
-      <button class="btn green full" id="btnOptimize">🧭 GPS 최적 경로 정렬</button>
-      <button class="btn full" id="btnDispatch">🚀 출발 전송 → 지도</button>
-    </div>
-    <div class="muted" style="margin-top:8px">※ 운송장 스캔/수기는 waybill.html에서만 진행합니다.</div>
+  <div class="topbar">
+    <button class="btn orange" id="btnScan">📦 운송장 스캐너</button>
+    <button class="btn green" id="btnOptimize">🧭 최적경로</button>
+    <button class="btn blue" id="btnDispatch">🚀 출발전송</button>
   </div>
 
   <div class="card">
-    <b>고객 목록(스테이징)</b>
-    <div id="list" class="list" style="margin-top:8px"></div>
+    <div class="kpi"><span>총 고객</span><span id="custCount">0</span></div>
+    <div class="cards" id="cards"></div>
+    <div class="muted">※ 동일 고객(이름·주소·전화)이면 자동 병합됩니다.</div>
   </div>
 </div>
 
 <script>
-const STAGING_KEY = 'stagingDeliveries';    // waybill.html이 여기에 쌓음
-const FINAL_KEY   = 'deliveriesJSON';       // map.html이 읽음
+/* ===== 기본 설정 ===== */
+const reader=new ZXing.BrowserMultiFormatReader();
+const cardsDiv=document.getElementById("cards");
+let customers=JSON.parse(localStorage.getItem("customers")||"[]");
+let scannedList=JSON.parse(localStorage.getItem("waybills")||"[]");
 
-let customers = [];
-function load(){ try{ customers = JSON.parse(localStorage.getItem(STAGING_KEY)||'[]'); }catch{ customers=[]; } }
-function save(){ localStorage.setItem(STAGING_KEY, JSON.stringify(customers)); }
-
+/* ===== 고객카드 렌더 ===== */
 function render(){
-  const box = document.getElementById('list');
-  if(!customers.length){ box.innerHTML = '<div class="muted">스테이징된 고객이 없습니다. 먼저 운송장 스캔/입력을 진행하세요.</div>'; return; }
-  box.innerHTML = customers.map((c,i)=>`
-    <div class="item">
-      <div class="row">
-        <div class="order">${c.order ?? i+1}</div>
+  document.getElementById('custCount').textContent=customers.length;
+  cardsDiv.innerHTML=customers.map(c=>`
+    <div class="citem">
+      <div class="crow">
+        <div class="order">${c.order??'-'}</div>
         <div style="flex:1">
-          <div><b>${c.name||'-'}</b> · ${c.address||'-'}</div>
-          <div>📞 <a class="tel" href="tel:${c.phone||''}">${c.phone||'-'}</a> · 📦 ${Array.isArray(c.waybills)?c.waybills.length:0}개</div>
-          <div class="muted">운송장: ${(c.waybills||[]).join(', ')||'-'}</div>
+          <div><b>${c.name}</b> · ${c.address}</div>
+          <div class="muted">📞 ${c.phone}</div>
+          <div class="muted">📦 ${c.boxes}박스</div>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
+/* ===== 스캐너/입력 ===== */
+document.getElementById("btnScan").onclick=()=>location.href="waybill.html";
+
+/* 블루투스 스캐너 직접 입력 */
+window.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&window._scanBuf){
+    onScan(window._scanBuf.trim());
+    window._scanBuf="";
+  } else {
+    window._scanBuf=(window._scanBuf||"")+e.key;
+  }
+});
+
+function onScan(code){
+  playDing();
+  scannedList.push({code,time:new Date().toISOString()});
+  localStorage.setItem("waybills",JSON.stringify(scannedList));
+  const fake=getFakeCustomer(code);
+  mergeCustomer(fake);
+  render();
+}
+
+/* ===== 가짜 고객 생성 (테스트용) ===== */
+function getFakeCustomer(code){
+  const i=customers.length+1;
+  return {
+    id:code,
+    name:"고객"+i,
+    phone:"010-1111-"+String(1000+i),
+    address:`경기도 시흥시 조남동 ${100+Math.floor(i%5)}동 ${i+100}호`,
+    boxes:1,
+    lat:37.38+(Math.random()-0.5)*0.01,
+    lng:126.80+(Math.random()-0.5)*0.01,
+    order:null
+  };
+}
+
+/* ===== 병합 로직 ===== */
+function mergeCustomer(newC){
+  let same=customers.find(c=>
+    (c.address===newC.address && (c.phone===newC.phone || c.name===newC.name)));
+  if(same){same.boxes+=newC.boxes;}
+  else{customers.push(newC);}
+  localStorage.setItem("customers",JSON.stringify(customers));
+}
+
+/* ===== 최적 경로 ===== */
 function optimize(){
-  if(!navigator.geolocation) return alert('GPS 권한을 허용해주세요.');
+  if(!navigator.geolocation) return alert("GPS 허용 필요");
   navigator.geolocation.getCurrentPosition(pos=>{
-    const {latitude, longitude} = pos.coords;
-    customers.sort((a,b)=>{
-      const da = Math.hypot((a.lat||0)-latitude, (a.lng||0)-longitude);
-      const db = Math.hypot((b.lat||0)-latitude, (b.lng||0)-longitude);
-      return da - db;
-    });
+    const [a,b]=[pos.coords.latitude,pos.coords.longitude];
+    const dist=(x1,y1)=>Math.hypot(x1-a,y1-b);
+    customers.sort((x,y)=>dist(x.lat,x.lng)-dist(y.lat,y.lng));
     customers.forEach((c,i)=>c.order=i+1);
-    save(); render();
-    alert('🧭 GPS 기준으로 순서가 정렬되었습니다.');
-  }, ()=>alert('GPS 정보를 가져올 수 없습니다.'));
+    alert("🧭 최적경로 설정 완료");
+    render();
+  });
 }
 
+/* ===== 출발 전송 ===== */
 function dispatch(){
-  if(!customers.length) return alert('보낼 데이터가 없습니다.');
-  localStorage.setItem(FINAL_KEY, JSON.stringify(customers));    // 최종 세트
-  localStorage.setItem('startDispatch','1');
-  localStorage.setItem('optimizeByGPS','1');
-  alert('🚀 출발 전송 완료! 지도 화면으로 이동합니다.');
-  location.href='map.html';
+  localStorage.setItem("deliveriesJSON",JSON.stringify(customers));
+  localStorage.setItem("startDispatch","1");
+  localStorage.removeItem("customers");
+  alert("🚀 map.html로 전송 완료");
+  location.href="map.html";
 }
 
-document.getElementById('btnOptimize').onclick=optimize;
-document.getElementById('btnDispatch').onclick=dispatch;
+/* ===== Ding 사운드 ===== */
+function playDing(){
+  const a=new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+  a.play();
+}
 
-load(); render();
+/* ===== 이벤트 ===== */
+document.getElementById("btnOptimize").onclick=optimize;
+document.getElementById("btnDispatch").onclick=dispatch;
+
+/* ===== 초기화 ===== */
+render();
 </script>
 </body>
 </html>
