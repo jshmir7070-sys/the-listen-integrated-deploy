@@ -1,141 +1,344 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>현재 지도 - The Listen</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
-  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:#f7f9fc}
-  header{background:#007bff;color:#fff;text-align:center;padding:10px;font-weight:800}
+  :root{--brand:#007bff;--muted:#6b7280;--ok:#10b981;--danger:#ef4444;--border:#e5e7eb;--card:#fff;--bg:#f7f9fc;}
+  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:var(--bg)}
+  header{background:var(--brand);color:#fff;text-align:center;padding:10px;font-weight:800}
   #map{width:100%;height:90vh}
-  #detail{position:fixed;left:0;bottom:0;width:100%;background:#fff;border-radius:16px 16px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .35s;z-index:4}
+
+  /* 하단 그룹 시트 */
+  #sheet{position:fixed;left:0;bottom:0;width:100%;background:var(--card);border-radius:16px 16px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .3s;z-index:4}
+  #sheet.active{transform:translateY(0)}
+  .sheet-in{padding:12px}
+  .title{text-align:center;font-weight:900}
+  .list{max-height:40vh;overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:8px;padding:8px}
+  .item{border:1px solid var(--border);border-radius:12px;padding:8px;margin-bottom:8px;display:flex;gap:10px;align-items:center;cursor:pointer}
+  .badge{min-width:28px;height:28px;border-radius:999px;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900}
+  .icons{display:flex;gap:10px}
+  .icon-btn{border:none;background:transparent;font-size:20px;cursor:pointer}
+
+  /* 상세 모달 */
+  #detail{position:fixed;left:0;bottom:0;width:100%;background:var(--card);border-radius:16px 16px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.3);transform:translateY(100%);transition:transform .3s;z-index:5}
   #detail.active{transform:translateY(0)}
-  .inner{padding:14px}
-  .btn{border:none;padding:10px 14px;border-radius:10px;margin:4px;color:#fff;background:#007bff;font-weight:700;cursor:pointer}
-  .btn.gray{background:#6b7280}
-  .btn.green{background:#10b981}
-  .muted{color:#6b7280}
-  .thumbs{display:flex;justify-content:space-between}
-  .thumb img{width:48%;border-radius:10px;border:1px solid #ddd}
-  input,textarea,select{width:100%;padding:10px;margin-top:4px;border:1px solid #ddd;border-radius:10px}
+  .inner{padding:12px}
+  .section{margin:8px 0}
+  .row{display:flex;gap:8px}
+  .col{flex:1}
+  label{font-weight:700}
+  input,textarea,select{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px}
+  .thumbs{display:flex;gap:8px}
+  .thumbs img{width:50%;height:180px;object-fit:cover;border:1px solid var(--border);border-radius:12px}
+  .btn{border:none;padding:10px 14px;border-radius:10px;margin:6px;color:#fff;background:var(--brand);font-weight:700;cursor:pointer}
+  .btn.green{background:var(--ok)} .btn.gray{background:#6b7280} .muted{color:var(--muted)}
+  .my-location{width:12px;height:12px;background:rgba(0,123,255,.95);border-radius:50%;border:2px solid #fff}
 </style>
 </head>
 <body>
 <header>🗺 실시간 지도 - The Listen</header>
 <div id="map"></div>
+
+<!-- 하단 그룹 시트 (동 기준 3~4개 미니카드) -->
+<div id="sheet">
+  <div class="sheet-in">
+    <div class="title" id="sheetTitle">동 그룹</div>
+    <div class="list" id="miniList"></div>
+    <div style="text-align:center"><button class="btn gray" onclick="closeSheet()">닫기</button></div>
+  </div>
+</div>
+
+<!-- 상세 전체창: 배송 완료 확인 -->
 <div id="detail">
   <div class="inner">
-    <div id="detailTitle" style="font-weight:900;font-size:1.1rem;margin-bottom:6px"></div>
-    <div id="detailAddr" class="muted"></div>
+    <div class="title" id="detailTitle">배송 완료 확인</div>
+    <div class="muted" id="detailAddr"></div>
 
-    <div class="thumbs" style="margin:8px 0">
-      <img id="imgToday" alt="금일">
-      <img id="imgPrev" alt="직전">
+    <div class="thumbs section">
+      <img id="imgToday" alt="오늘 사진">
+      <img id="imgPrev"  alt="이전 사진">
     </div>
 
-    <label>공동현관 비밀번호 (자동 저장)</label>
-    <input id="entCode" readonly />
+    <div class="row section">
+      <div class="col">
+        <label>공동현관 비밀번호</label>
+        <input id="entCode" readonly value="*1234#" />
+      </div>
+      <div class="col">
+        <label>고객요청(읽기전용)</label>
+        <input id="reqNote" readonly value="문앞 배송 요청" />
+      </div>
+    </div>
 
-    <label>고객 요청 메모</label>
-    <textarea id="reqNote" readonly></textarea>
+    <div class="section">
+      <label>기사님 공동비밀번호 등록 요청</label>
+      <input id="driverReq" placeholder="비밀번호 등록 요청/현장 메모" />
+    </div>
 
-    <label>기사님 공동현관 비밀번호 등록 요청</label>
-    <input id="driverReq" placeholder="비밀번호 등록 요청 메모" />
+    <div class="row section">
+      <div class="col">
+        <label>배송형식</label>
+        <select id="delType">
+          <option value="face">고객 직접 수령(대면)</option>
+          <option value="door" selected>비대면(문앞)</option>
+          <option value="box">비대면(택배함)</option>
+          <option value="storage">비대면(보관소)</option>
+          <option value="guard">비대면(경비실/관리실)</option>
+          <option value="req">비대면(고객요청장소)</option>
+          <option value="etc">비대면(기타)</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>기타/요청장소 메모</label>
+        <input id="placeMemo" placeholder="기타 선택 시 상세 메모" />
+      </div>
+    </div>
 
-    <label>배송 형태</label>
-    <select id="delType">
-      <option value="door">문앞</option>
-      <option value="keep">보관장소</option>
-      <option value="face">대면배송</option>
-    </select>
+    <div class="section" id="wbArea">
+      <label>운송장(개별 완료 가능)</label>
+      <div id="wbList"></div>
+    </div>
 
-    <div id="waybills"></div>
-
-    <button class="btn" onclick="triggerPhoto()">📸 사진 업로드</button>
-    <button class="btn green" id="btnDone" onclick="completeDelivery()">✅ 배송완료</button>
-    <button class="btn gray" onclick="closeDetail()">닫기</button>
+    <div class="section" style="text-align:center">
+      <button class="btn" onclick="triggerPhoto()">📸 사진 전송</button>
+      <button class="btn green" id="btnDone" onclick="completeDelivery()">✅ 배송완료</button>
+      <button class="btn gray" onclick="closeDetail()">뒤로</button>
+    </div>
   </div>
 </div>
 
 <script>
-const map=new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(37.38,126.806),level:5});
-const deliveries=JSON.parse(localStorage.getItem("deliveriesJSON")||"[]");
-const bounds=new kakao.maps.LatLngBounds();
-const markerById={};
-let sel=null;
+/* ================= 지도 & 데이터 ================= */
+const map = new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(37.3795,126.806),level:5});
+const deliveries = JSON.parse(localStorage.getItem("deliveriesJSON")||"[]"); // 최소 정보
+const waybillDetails = JSON.parse(localStorage.getItem("waybillDetails")||"{}"); // 상세 DTO 모음
+const bounds = new kakao.maps.LatLngBounds();
+const markerById = {};
+let sel = null;          // 상세 고객
+let curGroup = [];       // 현재 동 그룹
+let curDongKey = "";     // 현재 동 key
 
-/* ===== 동/호 파싱 ===== */
-function parseDongHo(addr=""){const m=addr.match(/(\d+)[동\-]+(\d+)/);return m?{dong:m[1],ho:m[2]}:{dong:"0",ho:"0"};}
-function offset(lat,lng,dong,ho){return [lat+(dong%10)*0.0001,lng+(ho%10)*0.0001];}
+/* ================= 내 위치 점 ================= */
+let myCircle=null;
+if(navigator.geolocation){
+  navigator.geolocation.watchPosition(pos=>{
+    const p=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
+    if(!myCircle) myCircle=new kakao.maps.CustomOverlay({map,position:p,content:'<div class="my-location"></div>'});
+    else myCircle.setPosition(p);
+  },()=>{}, {enableHighAccuracy:true});
+}
 
-/* ===== 마커 ===== */
+/* ================= 동/호 파서 & 마커 오프셋 ================= */
+// 1001동/1001-, 101동/101-, A동/가동/나동 등도 "동 키"로 통일
+function extractDongKey(addr=""){
+  addr = (addr||"").replace(/\s+/g,' ');
+  // 우선순위 1: nnnn동
+  let m = addr.match(/(\d{3,4})\s*동/);
+  if(m) return m[1];
+  // 우선순위 2: nnnn-xxxx (하이픈)
+  m = addr.match(/(\d{3,4})\s*-/);
+  if(m) return m[1];
+  // 우선순위 3: 3자리/4자리 숫자 연속 등장 → 동으로 추정
+  m = addr.match(/(\d{3,4})/);
+  if(m) return m[1];
+  // 우선순위 4: 한글 동(A동/가동/나동 등) → 초성 기반 키
+  m = addr.match(/([A-Za-z가-힣])\s*동/);
+  if(m) return m[1]; // 'A' or '가' 등
+  return "UNK";
+}
+// 호수 추출(마지막 숫자 블록)
+function extractHo(addr=""){
+  const nums=(addr.match(/(\d{1,4})/g)||[]).map(n=>parseInt(n,10));
+  return nums.length? nums[nums.length-1] : 0;
+}
+// 소수점 미세 오프셋: 동/호 뒤 두자리 사용
+function microOffset(lat,lng,dongKey,ho){
+  const dNum = parseInt(String(dongKey).slice(-2) || "0",10);
+  const hNum = parseInt(String(ho).slice(-2) || "0",10);
+  const dOff = ((dNum%10)-5)*0.00008; // 약 8~10m 수준
+  const hOff = ((hNum%10)-5)*0.00008;
+  return [lat + dOff, lng + hOff];
+}
+
+/* ================= 마커생성 ================= */
 deliveries.forEach((d,i)=>{
- const {dong,ho}=parseDongHo(d.address||"");
- const [lat,lng]=offset(d.lat,d.lng,dong,ho);
- const el=document.createElement("div");
- el.style.cssText=`width:30px;height:30px;border-radius:50%;background:#007bff;color:#fff;
- display:flex;align-items:center;justify-content:center;font-weight:900;cursor:pointer;border:2px solid #fff`;
- el.textContent=d.order??i+1;
- const mk=new kakao.maps.CustomOverlay({map,position:new kakao.maps.LatLng(lat,lng),content:el});
- markerById[d.id]=mk;
- bounds.extend(new kakao.maps.LatLng(lat,lng));
- el.onclick=()=>openDetail(d);
+  const dongKey = extractDongKey(d.address||"");
+  const ho = extractHo(d.address||"");
+  const [lat,lng] = microOffset(d.lat||37.3795, d.lng||126.806, dongKey, ho);
+  const el = document.createElement('div');
+  el.style.cssText=`width:30px;height:30px;border-radius:50%;background:#007bff;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid #fff;cursor:pointer`;
+  el.textContent = d.order || (i+1);
+  const mk = new kakao.maps.CustomOverlay({map,position:new kakao.maps.LatLng(lat,lng),content:el});
+  markerById[d.id]=mk;
+  bounds.extend(new kakao.maps.LatLng(lat,lng));
+  el.onclick = ()=> openDongSheet(dongKey, d);
 });
 if(!bounds.isEmpty()) map.setBounds(bounds);
 
-/* ===== 상세 ===== */
-const detail=document.getElementById("detail");
-const title=document.getElementById("detailTitle");
-const addr=document.getElementById("detailAddr");
-const ent=document.getElementById("entCode");
-const req=document.getElementById("reqNote");
-const driver=document.getElementById("driverReq");
-const imgT=document.getElementById("imgToday");
-const imgP=document.getElementById("imgPrev");
-const wbDiv=document.getElementById("waybills");
-const done=document.getElementById("btnDone");
-const selType=document.getElementById("delType");
+/* ================= 동 그룹 시트 ================= */
+const sheet=document.getElementById('sheet');
+const miniList=document.getElementById('miniList');
+const sheetTitle=document.getElementById('sheetTitle');
 
-function openDetail(c){
- sel=c;
- title.textContent=`${c.name} (${c.address})`;
- addr.textContent=c.phone;
- ent.value="*1234#";
- req.value="문앞 배송 부탁드립니다.";
- imgT.src=""; imgP.src="";
- wbDiv.innerHTML=c.id.split(",").map((w,i)=>`<div><input type="checkbox" id="chk${i}" checked> ${w}</div>`).join("");
- detail.classList.add("active");
- updateBtnState();
+function openDongSheet(dongKey, tapped){
+  curDongKey = dongKey;
+  // 같은 동의 고객만 선별
+  let group = deliveries.filter(x=>extractDongKey(x.address||"")===dongKey);
+  // 완료 우선순위: 미완료(상단) → 완료(하단)
+  const completed = JSON.parse(localStorage.getItem('completed')||'[]');
+  const isDone = id => completed.some(k=>k.id===id);
+  // 아래층→고층 (호수 오름차순)
+  group.sort((a,b)=>extractHo(a.address)-extractHo(b.address));
+  // 완료는 마지막으로
+  group = group.sort((a,b)=> (isDone(a.id)?1:0) - (isDone(b.id)?1:0));
+  curGroup = group;
+
+  sheetTitle.textContent = `${dongKey}동 근처 고객 (${group.length})`;
+  // 하단 반 시트: 3~4개 카드 미니 목록
+  const items = group.slice(0,4).map(g=>{
+    const telIcon = `<button class="icon-btn" title="전화" onclick="callCustomer('${g.phone||''}');event.stopPropagation()">📞</button>`;
+    const naviIcon= `<button class="icon-btn" title="네비" onclick="goNavi('${encodeURIComponent(g.address||"")}',${g.lat||0},${g.lng||0});event.stopPropagation()">🧭</button>`;
+    const done = isDone(g.id) ? 'opacity:.45;' : '';
+    return `
+      <div class="item" style="${done}" onclick="openDetail('${g.id}')">
+        <div class="badge">${g.order||'-'}</div>
+        <div style="flex:1">
+          <div><b>${g.name||'고객'}</b> — ${g.address||''}</div>
+          <div class="muted">📦 ${g.boxes||1}박스</div>
+        </div>
+        <div class="icons">${naviIcon}${telIcon}</div>
+      </div>`;
+  }).join('');
+  miniList.innerHTML = items || `<div class="muted">해당 동에 고객이 없습니다.</div>`;
+  sheet.classList.add('active');
+}
+function closeSheet(){ sheet.classList.remove('active'); }
+
+/* ================= 상세 전체창 ================= */
+const detail=document.getElementById('detail');
+const dTitle=document.getElementById('detailTitle');
+const dAddr=document.getElementById('detailAddr');
+const imgToday=document.getElementById('imgToday');
+const imgPrev =document.getElementById('imgPrev');
+const delType=document.getElementById('delType');
+const placeMemo=document.getElementById('placeMemo');
+const wbArea=document.getElementById('wbArea');
+const wbListDiv=document.getElementById('wbList');
+const btnDone=document.getElementById('btnDone');
+
+function openDetail(id){
+  sel = deliveries.find(v=>v.id===id);
+  if(!sel) return;
+  dTitle.textContent = `${sel.name||'고객'} — 배송 완료 확인`;
+  dAddr.textContent  = `${sel.address||''}`;
+  // 사진 로딩
+  const arr = loadPhotos(id);
+  imgToday.src = arr[0]?.data || '';
+  imgPrev.src  = arr[1]?.data || '';
+
+  // 운송장 세부(같은 고객 병합 운송장 시나리오: 최소정보라 id 하나만 있을 수 있음)
+  // 상세 DTO가 있다면 노출
+  const wbArray = collectWaybillsForCustomer(sel);
+  wbListDiv.innerHTML = wbArray.map((w,i)=>`<div><input type="checkbox" id="wb_${i}" checked> ${w}</div>`).join('') || `<div class="muted">운송장 정보 없음</div>`;
+
+  updateDoneState();
+  detail.classList.add('active');
+  sheet.classList.remove('active');
 }
 
+function closeDetail(){ detail.classList.remove('active'); }
+
+// 운송장 수집: 동일 이름/전화/주소(2개 이상 일치)한 상세 DTO의 waybill들을 묶음
+function collectWaybillsForCustomer(cust){
+  const allWb = Object.keys(waybillDetails);
+  const arr = [];
+  allWb.forEach(w=>{
+    const d = waybillDetails[w]?.receiver || {};
+    let s=0;
+    if(d.name && cust.name && d.name===cust.name) s++;
+    if(d.phone&& cust.phone&&d.phone===cust.phone) s++;
+    if(d.address&&cust.address&&d.address===cust.address) s++;
+    if(s>=2) arr.push(w);
+  });
+  // 최소 1개 보장
+  if(!arr.length && cust.id) arr.push(cust.id);
+  return arr;
+}
+
+/* ================= 사진 전송 ================= */
 function triggerPhoto(){
- const i=document.createElement("input");
- i.type="file";i.accept="image/*";i.capture="environment";
- i.onchange=e=>{
-   alert("사진 업로드 완료");
-   localStorage.setItem("photo_"+sel.id,Date.now());
-   updateBtnState();
- };
- i.click();
+  const input=document.createElement('input');
+  input.type='file'; input.accept='image/*'; input.capture='environment';
+  input.onchange=e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload=()=>{
+      const arr=loadPhotos(sel.id); arr.unshift({ts:Date.now(),data:fr.result});
+      savePhotos(sel.id,arr);
+      imgPrev.src  = arr[1]?.data || '';
+      imgToday.src = arr[0]?.data || '';
+      alert('📸 사진 전송 완료');
+      updateDoneState();
+    };
+    fr.readAsDataURL(f);
+  };
+  input.click();
 }
 
-function updateBtnState(){
- const type=selType.value;
- const hasPhoto=localStorage.getItem("photo_"+(sel?.id||""));
- done.disabled=(type==="keep"&&!hasPhoto);
+/* ================= 완료 조건/처리 ================= */
+// 대면배송: 사진 없이 완료 가능
+// 비대면(문앞/보관 등): 사진 없으면 완료 버튼 비활성화
+function updateDoneState(){
+  const type=delType.value;
+  const hasPhoto = !!(loadPhotos(sel?.id||'')[0]);
+  btnDone.disabled = (type!=='face' && !hasPhoto);
 }
-
-selType.onchange=updateBtnState;
+delType.onchange = updateDoneState;
 
 function completeDelivery(){
- const mk=markerById[sel.id];
- if(mk) mk.getContent().style.opacity="0.4";
- alert("✅ 배송완료 처리");
- closeDetail();
+  // 어떤 운송장을 완료 처리할지
+  const checks = [...(wbListDiv.querySelectorAll('input[type="checkbox"]')||[])];
+  let selected = checks.filter(ch=>ch.checked).map(ch=>ch.nextSibling.textContent.trim());
+  if(!selected.length){ // 미선택이면 전체 완료
+    selected = collectWaybillsForCustomer(sel);
+  }
+  // 완료 로그
+  const comp = JSON.parse(localStorage.getItem('completed')||'[]');
+  comp.push({ id: sel.id, date: new Date().toISOString(), address: sel.address, waybills: selected, type: delType.value, memo: placeMemo.value||'' });
+  localStorage.setItem('completed', JSON.stringify(comp));
+  // 마커 반투명
+  const mk = markerById[sel.id];
+  if(mk) mk.getContent().style.opacity='0.4';
+  alert('✅ 배송완료 처리되었습니다.');
+  // 다시 동 그룹을 열어 완료 정렬 반영
+  if(curDongKey) openDongSheet(curDongKey, sel);
+  closeDetail();
 }
 
-function closeDetail(){detail.classList.remove("active");}
+/* ================= 사진 로컬 스토리지 ================= */
+function loadPhotos(id){ try{return JSON.parse(localStorage.getItem('photos_'+id)||'[]');}catch(e){return [];} }
+function savePhotos(id,arr){ localStorage.setItem('photos_'+id, JSON.stringify(arr||[])); }
+
+/* ================= 전화 & 네비 ================= */
+function callCustomer(tel){
+  if(!tel){ alert('전화번호가 없습니다.'); return; }
+  location.href = `tel:${tel}`;
+}
+function goNavi(addr,lat,lng){
+  const app = `kakaomap://route?ep=${lat},${lng}&by=CAR`;
+  const web = `https://map.kakao.com/link/to/${addr},${lat},${lng}`;
+  location.href=app; setTimeout(()=>location.href=web, 800);
+}
+
+/* 전역 */
+window.openDetail = openDetail;
+window.closeDetail= closeDetail;
+window.closeSheet = closeSheet;
+window.callCustomer = callCustomer;
+window.goNavi = goNavi;
 </script>
 </body>
 </html>
