@@ -3,135 +3,59 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>운송장 스캔/입력 - The Listen</title>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
+<title>운송장 입력 - The Listen</title>
 <style>
-  :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;--muted:#6b7280;--border:#e5e7eb}
-  *{box-sizing:border-box}
+  :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;}
   body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
   header{background:var(--brand);color:#fff;text-align:center;padding:12px;font-weight:900}
-  .wrap{max-width:520px;margin:0 auto;padding:12px}
-  .card{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:14px;margin-bottom:12px}
-  .btn{border:none;border-radius:10px;padding:12px 14px;font-weight:800;color:#fff;background:var(--brand);cursor:pointer}
-  .btn.full{width:100%} .btn.gray{background:#6b7280} .btn.green{background:#10b981} .btn.orange{background:#f59e0b}
-  .stack{display:flex;gap:8px;flex-wrap:wrap}
-  input[type="text"]{flex:1;padding:12px;border:1px solid var(--border);border-radius:10px}
-  video{width:100%;border-radius:12px;background:#000}
-  .list{max-height:420px;overflow:auto;border:1px solid var(--border);border-radius:12px;padding:8px}
-  .item{border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px}
-  .muted{color:#6b7280}
-  .row{display:flex;gap:8px}
-  .col{flex:1}
-  a.tel{color:#007bff;text-decoration:none}
+  .wrap{max-width:480px;margin:auto;padding:14px}
+  .input-group{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  input[type="number"]{flex:1;padding:12px;font-size:16px;border:1px solid #ccc;border-radius:10px}
+  .btn{padding:12px 14px;border:none;border-radius:10px;background:#007bff;color:#fff;font-weight:700;cursor:pointer;width:100%}
+  .icon-btn{background:#007bff;color:#fff;border:none;border-radius:10px;padding:12px;font-size:18px;cursor:pointer}
 </style>
 </head>
 <body>
-<header>📦 운송장 스캔/입력</header>
+<header>📦 운송장 입력 (The Listen)</header>
 <div class="wrap">
-
-  <div class="card">
-    <video id="preview" playsinline muted></video>
-    <div class="stack" style="margin-top:8px">
-      <button class="btn" id="btnStart">📸 후면카메라</button>
-      <input id="wbInput" type="text" inputmode="numeric" placeholder="운송장 번호 입력" />
-      <button class="btn green" id="btnAdd">추가</button>
-    </div>
-    <div class="muted" style="margin-top:6px">※ 스캔/수기 입력 시 고객 데이터가 자동 생성/병합됩니다.</div>
+  <div class="input-group">
+    <input id="waybill" type="number" inputmode="numeric" placeholder="운송장 번호 입력" />
+    <button class="icon-btn" id="cameraBtn">📷</button>
   </div>
-
-  <div class="card">
-    <b>스테이징 고객</b>
-    <div id="list" class="list" style="margin-top:8px"></div>
-    <div class="stack" style="margin-top:8px">
-      <button class="btn gray full" onclick="location.href='depart.html'">⬅️ 출발 대시보드로</button>
-    </div>
-  </div>
+  <button class="btn" id="addBtn">추가</button>
+  <button class="btn" style="background:#6b7280;margin-top:8px" id="backBtn">⬅️ 뒤로가기</button>
 </div>
 
 <script>
-const STAGING_KEY = 'stagingDeliveries';
-let customers = [];     // [{ name, phone, address, lat, lng, waybills:[code,...], order? }]
+let customers=JSON.parse(localStorage.getItem("customers")||"[]");
+let scanned=JSON.parse(localStorage.getItem("waybills")||"[]");
 
-function load(){ try{ customers = JSON.parse(localStorage.getItem(STAGING_KEY)||'[]'); }catch{ customers=[]; } }
-function save(){ localStorage.setItem(STAGING_KEY, JSON.stringify(customers)); }
-
-function randomGeoNear(){
-  const baseLat=37.3795, baseLng=126.806;
-  return { lat: baseLat+(Math.random()-0.5)*0.008, lng: baseLng+(Math.random()-0.5)*0.008 };
-}
-function mockCustomerFor(code){
-  const n = Math.floor(Math.random()*20)+101;  // 101~120동
-  const h = 100 + Math.floor(Math.random()*50);
-  const geo = randomGeoNear();
-  // 가짜 화물 정보 (운송장 상세용)
-  const product = ["딸기","우유","샐러드","두부","요거트"][Math.floor(Math.random()*5)];
-  return {
-    name: `조남고객${n}`,
-    phone: `010-33${n}-${h}22`,
-    address: `경기 시흥시 조남동 ${n}동 ${h}호`,
-    lat: geo.lat, lng: geo.lng,
-    waybills: [{
-      code,
-      productName: product,
-      fragile: Math.random() < 0.3,
-      shipper: "더 리슨 물류센터",
-      recipient: `조남고객${n}`,
-      status: "집하완료"
-    }]
-  };
-}
-
-function mergeByIdentity(base, added){
-  // 기준: 이름+전화+주소 동일
-  const hit = customers.find(c => c.name===base.name && c.phone===base.phone && c.address===base.address);
-  if(hit){
-    const newWB = added.waybills[0];
-    if(!hit.waybills.some(w=>w.code===newWB.code)) hit.waybills.push(newWB);
-    // 좌표가 없으면 채움
-    if(!hit.lat) hit.lat = added.lat;
-    if(!hit.lng) hit.lng = added.lng;
-  }else{
-    customers.push({...base});
-  }
-}
-
-function render(){
-  const box = document.getElementById('list');
-  if(!customers.length){ box.innerHTML = '<div class="muted">스테이징 고객이 없습니다. 운송장을 등록해주세요.</div>'; return;}
-  box.innerHTML = customers.map((c,i)=>`
-    <div class="item">
-      <div><b>${i+1}. ${c.name}</b></div>
-      <div class="muted">${c.address}</div>
-      <div>📞 <a class="tel" href="tel:${c.phone}">${c.phone}</a> · 📦 ${c.waybills.length}개</div>
-      <div class="muted">운송장: ${c.waybills.map(w=>w.code).join(', ')}</div>
-    </div>
-  `).join('');
-}
-
-function addWaybill(code){
-  if(!code) return;
-  const candidate = mockCustomerFor(code);   // 실제 서비스에선 검색/입력 폼으로 대체
-  mergeByIdentity(candidate, candidate);
-  save(); render();
-}
-
-document.getElementById('btnAdd').onclick=()=>{
-  const v = document.getElementById('wbInput').value.trim();
-  if(v){ addWaybill(v); document.getElementById('wbInput').value=''; }
-};
-document.getElementById('wbInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter') document.getElementById('btnAdd').click();
-});
-
-const reader = new ZXing.BrowserMultiFormatReader();
-document.getElementById('btnStart').onclick=()=>{
-  const video = document.getElementById('preview');
-  reader.decodeFromVideoDevice(null, video, (res,err)=>{
-    if(res){ addWaybill(res.text); }
-  });
+document.getElementById("addBtn").onclick=()=>{
+  const v=document.getElementById("waybill").value.trim();
+  if(!v) return alert("운송장 번호를 입력해주세요.");
+  ding();
+  const c={id:v,name:"고객"+(customers.length+1),phone:"010-0000-0000",address:"경기도 시흥시 조남동 "+(100+customers.length)+"동 "+(200+customers.length)+"호",boxes:1};
+  mergeCustomer(c);
+  document.getElementById("waybill").value='';
 };
 
-load(); render();
+document.getElementById("backBtn").onclick=()=>location.href="depart.html";
+
+document.getElementById("cameraBtn").onclick=()=>alert("📸 후면카메라 작동 (모바일 전용)");
+
+function mergeCustomer(newC){
+  let same=customers.find(c=>(c.address===newC.address && c.name===newC.name));
+  if(same) same.boxes+=newC.boxes;
+  else customers.push(newC);
+  scanned.push({code:newC.id,time:new Date().toISOString()});
+  localStorage.setItem("customers",JSON.stringify(customers));
+  localStorage.setItem("waybills",JSON.stringify(scanned));
+  alert("운송장 등록 완료!");
+}
+
+function ding(){
+  const a=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");a.play();
+}
 </script>
 </body>
 </html>
