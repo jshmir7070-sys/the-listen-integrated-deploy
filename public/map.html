@@ -3,381 +3,259 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>현재 지도 - The Listen</title>
+<title>지도 - The Listen</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=301ef23f56e23f0dee3eaf47fe734b03&libraries=services"></script>
 <style>
-  :root{
-    --brand:#007bff;--muted:#6b7280;--ok:#10b981;--danger:#ef4444;
-    --card:#fff;--bg:#f7f9fc;--border:#e5e7eb;
-  }
-  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:var(--bg)}
+  :root{--brand:#007bff;--ok:#10b981;--muted:#6b7280;--border:#e5e7eb;--danger:#ef4444;--bg:#f7f9fc}
+  body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
   header{background:var(--brand);color:#fff;text-align:center;padding:10px;font-weight:800}
-  #map{width:100%;height:90vh;position:relative}
-  .btn{border:none;padding:10px 14px;border-radius:10px;margin:6px;color:#fff;background:var(--brand);font-weight:700;cursor:pointer}
-  .btn.gray{background:#6b7280}
-  .btn.green{background:var(--ok)}
-  .btn.red{background:var(--danger)}
-  .muted{color:var(--muted)}
-  .flex{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
-  /* 하단 동 그룹 카드 */
-  #card{position:fixed;left:0;bottom:0;width:100%;background:var(--card);border-radius:16px 16px 0 0;
-        box-shadow:0 -4px 14px rgba(0,0,0,.2);transform:translateY(100%);transition:transform .35s;z-index:3}
-  #card.active{transform:translateY(0)}
-  .card-inner{padding:14px 14px 8px}
-  .title{font-weight:900;margin-bottom:6px;text-align:center}
-  .list{max-height:40vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;padding:8px;background:#fff}
-  .item{border:1px solid var(--border);border-radius:12px;padding:10px;margin-bottom:8px;cursor:pointer}
-  .item .line1{display:flex;justify-content:space-between;gap:8px;align-items:center}
-  .badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:999px;color:#fff;font-weight:900;border:2px solid #fff;font-size:13px}
-  .tel{color:var(--brand);text-decoration:none}
-  /* 상세 전체 창 */
-  #detail{position:fixed;left:0;top:0;width:100%;height:100%;background:var(--card);
-          box-shadow:0 -4px 16px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .35s;z-index:4;overflow-y:auto}
+  #map{width:100%;height:90vh}
+  .btn{border:none;border-radius:10px;padding:10px 14px;color:#fff;font-weight:700;cursor:pointer;margin:4px}
+  .btn.blue{background:var(--brand)} .btn.gray{background:#6b7280} .btn.green{background:var(--ok)} .btn.red{background:var(--danger)}
+  .muted{color:var(--muted)} .flex{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  /* 하단 상세카드 (지도에서만) */
+  #detail{position:fixed;left:0;bottom:0;width:100%;background:#fff;border-radius:16px 16px 0 0;
+          box-shadow:0 -4px 16px rgba(0,0,0,.25);transform:translateY(100%);transition:transform .3s;z-index:4}
   #detail.active{transform:translateY(0)}
-  .detail-inner{padding:16px}
-  .section-title{font-weight:900;margin:10px 0 4px}
-  .row{display:flex;gap:8px;flex-wrap:wrap}
-  .col{flex:1;min-width:220px}
-  input[type="text"],select,textarea{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:14px}
-  textarea:disabled,input:disabled{background:#f3f4f6;color:#6b7280}
-  /* 사진 비교 좌우대칭 */
-  .thumbs{display:flex;justify-content:space-around;align-items:flex-start;gap:10px;margin:10px 0}
-  .thumb-box{width:48%;text-align:center}
-  .thumb-box img{width:100%;max-width:260px;height:170px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
-  .thumb-label{font-weight:700;margin:4px 0 2px}
-  /* 운송장 테이블 */
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #e5e7eb;padding:8px;font-size:14px}
-  th{background:#f8fafc}
-  /* 내 위치 */
+  .inner{padding:14px}
+  .title{font-weight:900;margin-bottom:6px;text-align:center}
+  .kv{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
+  .list{max-height:36vh;overflow:auto;border:1px solid var(--border);border-radius:12px;padding:8px}
+  .wb{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer}
+  .badge{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;border-radius:50%;background:#007bff;color:#fff;font-weight:900}
   .my-location{width:12px;height:12px;background:rgba(0,123,255,.95);border-radius:50%;border:2px solid #fff}
+  /* 모달 (화물추적) */
+  #trace{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:5}
+  .sheet{background:#fff;max-width:520px;width:92%;border-radius:14px;padding:14px}
+  .row{display:flex;gap:8px} .col{flex:1}
+  img.thumb{width:100%;height:160px;object-fit:cover;border:1px solid #ddd;border-radius:10px}
 </style>
 </head>
 <body>
-<header>🗺 실시간 지도 - The Listen</header>
+<header>🗺 지도 - The Listen</header>
 <div id="map"></div>
 
-<!-- 동 그룹 카드 -->
-<div id="card">
-  <div class="card-inner">
-    <div id="cardHead" class="title">고객 상세 정보</div>
-    <div id="cardAddr" class="muted" style="text-align:center"></div>
-    <div class="section-title">동 내 고객 (고층→저층, 완료 하단)</div>
-    <div id="groupList" class="list"></div>
-    <div class="flex"><button class="btn gray" onclick="closeCard()">닫기</button></div>
+<!-- 상세 고객카드 (지도 전용) -->
+<div id="detail">
+  <div class="inner">
+    <div id="dTitle" class="title">고객 상세</div>
+    <div id="dAddr" class="muted" style="text-align:center;margin-bottom:6px"></div>
+
+    <div class="kv">
+      <label><input type="checkbox" id="faceChk"> 대면배송(사진 없이 완료)</label>
+      <label><input type="checkbox" id="storeChk"> 보관장소(사진 필수)</label>
+      <select id="placeSel" style="padding:8px;border:1px solid var(--border);border-radius:8px">
+        <option>문앞</option><option>택배보관함</option><option>경비실</option><option>고객요청장소</option>
+      </select>
+    </div>
+
+    <div class="flex" style="margin-top:8px">
+      <button class="btn blue" id="btnPhoto">📸 사진촬영</button>
+      <button class="btn green" id="btnDone" disabled>✅ 배송완료</button>
+      <button class="btn gray" id="btnClose">닫기</button>
+    </div>
+
+    <div class="title" style="margin-top:10px">운송장 목록</div>
+    <div id="wbList" class="list"></div>
   </div>
 </div>
 
-<!-- 고객 상세 전체창 -->
-<div id="detail">
-  <div class="detail-inner">
-    <h2 id="detailTitle" style="text-align:center;margin-bottom:10px">고객 상세</h2>
-    <div id="detailAddr" class="muted" style="text-align:center;margin-bottom:10px"></div>
-
-    <!-- 사진 비교 -->
-    <div class="section-title">📸 사진 비교 (금일 / 직전)</div>
-    <div class="thumbs">
-      <div class="thumb-box"><div class="thumb-label">금일</div><img id="imgToday" alt="금일 없음"></div>
-      <div class="thumb-box"><div class="thumb-label">직전</div><img id="imgPrev" alt="직전 없음"></div>
-    </div>
-
-    <!-- 고정 정보(읽기) + 기사 선택 영역 -->
+<!-- 운송장 화물추적 모달 -->
+<div id="trace">
+  <div class="sheet">
+    <h3 style="margin:4px 0" id="tWb"></h3>
+    <div class="muted" id="tStatus" style="margin-bottom:8px"></div>
     <div class="row">
       <div class="col">
-        <div class="section-title">공동현관 비밀번호 (읽기)</div>
-        <input id="entCode" type="text" disabled placeholder="고객 제공 비밀번호(읽기)" />
+        <b>발송인</b><div id="tShipper" class="muted"></div>
       </div>
       <div class="col">
-        <div class="section-title">배송요청 메모 (읽기)</div>
-        <textarea id="reqNote" rows="2" disabled placeholder="고객 요청사항(읽기)"></textarea>
+        <b>수취인</b><div id="tRecv" class="muted"></div>
       </div>
     </div>
-
-    <div class="row">
-      <div class="col">
-        <div class="section-title">대면배송</div>
-        <label><input type="checkbox" id="faceToFace"> 대면 인도(체크 시 카메라 비활성)</label>
-      </div>
-      <div class="col">
-        <div class="section-title">인수자</div>
-        <label><input type="checkbox" id="hasReceiver"> 인수자 확인</label>
-      </div>
+    <div style="margin-top:8px"><b>제품</b> <span id="tProd" class="muted"></span></div>
+    <div style="margin:8px 0"><b>경로</b> <div class="muted" id="tRoute">집하→ 허브 → 배달출발</div></div>
+    <div class="row" style="gap:10px;margin-top:8px">
+      <img id="tImg0" class="thumb" alt="최근사진">
+      <img id="tImg1" class="thumb" alt="직전사진">
     </div>
-
-    <div class="row">
-      <div class="col">
-        <div class="section-title">보관 위치</div>
-        <select id="placeSelect">
-          <option value="문앞" selected>문앞</option>
-          <option value="경비실">경비실</option>
-          <option value="무인택배함">무인택배함</option>
-          <option value="관리실">관리실</option>
-          <option value="고객요청장소">고객요청장소</option>
-        </select>
-      </div>
-      <div class="col">
-        <div class="section-title">기사 메모</div>
-        <input id="driverNote" type="text" placeholder="현장 메모(저장됨)" />
-      </div>
-    </div>
-
-    <!-- 운송장 목록 (체크→부분완료 / 미체크→전체완료) -->
-    <div class="section-title">운송장 목록</div>
-    <div class="muted">체크 없으면 <b>전체 운송장</b> 완료. 체크 시 <b>체크된 운송장만</b> 완료 처리됩니다.</div>
-    <div style="overflow:auto"><table id="wbTable">
-      <thead><tr><th>선택</th><th>운송장</th><th>발송인</th><th>상품명</th><th>고가</th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-
-    <div class="flex" style="margin-top:8px">
-      <button class="btn" id="btnPhoto">📸 사진 촬영/전송</button>
-      <button class="btn green" id="btnComplete">✅ 배달완료</button>
-      <button class="btn gray" onclick="closeDetail()">닫기</button>
-    </div>
+    <div class="flex"><button class="btn gray" onclick="hideTrace()">닫기</button></div>
   </div>
 </div>
 
 <script>
-/* ===== Kakao Map Init ===== */
-const map = new kakao.maps.Map(document.getElementById("map"),{center:new kakao.maps.LatLng(37.3795,126.806),level:5});
-/* 데이터 로드 */
-let deliveries = JSON.parse(localStorage.getItem('deliveriesJSON')||'[]');
-if(!deliveries.length){
-  // 독립 테스트 시드
-  const baseLat=37.3795, baseLng=126.806;
-  deliveries = Array.from({length:6}).map((_,i)=>{
-    const d=101+(i%3)*2, ho=1200-i*3;
-    const wb1=`WB-${d}-${ho}`, wb2=`WB-${d}-${ho-1}`;
-    return {
-      id:`CUST-${d}-${ho}`, name:`테스트${i+1}`, phone:`01012${i}3-45${i}6`,
-      address:`경기도 시흥시 수풀안길 19-30 ${d}동 ${ho}호`,
-      lat:baseLat+(Math.random()-0.5)*0.01, lng:baseLng+(Math.random()-0.5)*0.01,
-      order:i+1, waybills:[wb1, wb2], boxes:2,
-      products:{ [wb1]:{sender:'시드화주',item:'시드1',highValue:false}, [wb2]:{sender:'시드화주',item:'시드2',highValue:(i%2===0)} }
-    };
-  });
-}
-/* 내 위치 */
-let myCircle=null;
+/* ---------- 데이터 ---------- */
+const FINAL_KEY='deliveriesJSON';
+const COMPLETED_KEY='completed';
+const PH_WB = code => `photos_wb_${code}`; // 운송장별 사진
+let deliveries=[];
+try{ deliveries = JSON.parse(localStorage.getItem(FINAL_KEY)||'[]'); }catch{ deliveries=[]; }
+
+/* ---------- 지도 ---------- */
+const map=new kakao.maps.Map(document.getElementById('map'),{center:new kakao.maps.LatLng(37.3795,126.806),level:5});
+const bounds = new kakao.maps.LatLngBounds();
+const markerByCid = {}; // 고객(카드) 단위
+
+// 내 위치 점
+let myDot=null;
 if(navigator.geolocation){
   navigator.geolocation.watchPosition(pos=>{
-    const now=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
-    if(!myCircle) myCircle=new kakao.maps.CustomOverlay({map,position:now,content:'<div class="my-location"></div>'});
-    else myCircle.setPosition(now);
-  });
+    const p=new kakao.maps.LatLng(pos.coords.latitude,pos.coords.longitude);
+    if(!myDot) myDot=new kakao.maps.CustomOverlay({map,position:p,content:'<div class="my-location"></div>'});
+    else myDot.setPosition(p);
+  },()=>{}, {enableHighAccuracy:true});
 }
 
-/* 파서 & 색상 */
-function parseDongHo(addr=""){
-  const n=addr.replace(/\s+/g,' ');
-  let m=n.match(/(\d{1,4})\s*동[^0-9]*(\d{1,4})\s*호/); if(m) return {dong:m[1],ho:+m[2]};
-  m=n.match(/(\d{3,4})\s*[-]\s*(\d{1,4})/); if(m) return {dong:m[1],ho:+m[2]};
-  m=n.match(/([A-Z가-힣]+)\s*동/); if(m) return {dong:m[1],ho:0};
-  const nums=(n.match(/(\d{2,4})/g)||[]); if(nums.length>=2) return {dong:nums.at(-2),ho:+nums.at(-1)};
-  return {dong:'0',ho:0};
-}
-const colorMap=new Map(),palette=["#007bff","#10b981","#f59e0b","#8b5cf6","#ef4444","#14b8a6","#f97316"];
-function colorForDong(d){if(!colorMap.has(d))colorMap.set(d,palette[(d.charCodeAt(0)%palette.length)]);return colorMap.get(d);}
-const keyComp='completedWBs';           // [{waybill, custId, date}]
-const keyPhotosWB=wb=>`photos_wb_${wb}`; // 운송장 단위 사진
-const keyNotes=id=>`notes_${id}`;        // 고객 단위 메모(읽기)
+// 고객 ID 부여(없을 수 있으니 이름+전화 해시)
+function cidOf(c){ return c.id || `${c.name||''}|${c.phone||''}|${c.address||''}`; }
 
-/* 마커 = 박스 수량 */
-const mkByCustId={}, elByCustId={}, bounds=new kakao.maps.LatLngBounds();
-deliveries.forEach(d=>{
-  const {dong}=parseDongHo(d.address);const col=colorForDong(String(dong));
+// 마커 생성
+deliveries.forEach((c,i)=>{
   const el=document.createElement('div');
-  el.style.cssText=`width:34px;height:34px;background:${col};color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid #fff;cursor:pointer`;
-  el.textContent=d.boxes; // 박스수량
-  const mk=new kakao.maps.CustomOverlay({map,position:new kakao.maps.LatLng(d.lat,d.lng),content:el});
-  mkByCustId[d.id]=mk; elByCustId[d.id]=el; bounds.extend(new kakao.maps.LatLng(d.lat,d.lng));
-  // 모든 운송장 완료 시 반투명
-  if(isAllWaybillsCompleted(d)) el.style.opacity='0.4';
-  el.onclick=()=>openCardForDong(d);
+  el.style.cssText=`width:30px;height:30px;background:#007bff;color:#fff;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-weight:900;border:2px solid #fff;cursor:pointer`;
+  el.textContent=c.order || (i+1);
+  const mk=new kakao.maps.CustomOverlay({map,position:new kakao.maps.LatLng(c.lat||37.3795,c.lng||126.806),content:el});
+  markerByCid[cidOf(c)] = mk;
+  bounds.extend(new kakao.maps.LatLng(c.lat||37.3795,c.lng||126.806));
+  el.onclick=()=>openDetail(c);
 });
 if(!bounds.isEmpty()) map.setBounds(bounds);
 
-/* 완료 판단: 고객의 모든 waybill이 완료됐는가 */
-function isAllWaybillsCompleted(cust){
-  const comp = JSON.parse(localStorage.getItem(keyComp)||'[]');
-  return cust.waybills.every(wb=>comp.some(x=>x.waybill===wb));
-}
+/* ---------- 상세카드 (map 전용) ---------- */
+const detail = document.getElementById('detail');
+const dTitle = document.getElementById('dTitle');
+const dAddr  = document.getElementById('dAddr');
+const wbList = document.getElementById('wbList');
+const faceChk= document.getElementById('faceChk');
+const storeChk=document.getElementById('storeChk');
+const placeSel= document.getElementById('placeSel');
+const btnPhoto= document.getElementById('btnPhoto');
+const btnDone = document.getElementById('btnDone');
+const btnClose= document.getElementById('btnClose');
 
-/* 동 그룹 카드 */
-const card=document.getElementById('card'),cardHead=document.getElementById('cardHead'),cardAddr=document.getElementById('cardAddr'),groupList=document.getElementById('groupList');
-let currentDong=null,currentMain=null,currentGroup=[];
-function openCardForDong(d){
-  const {dong}=parseDongHo(d.address);currentDong=dong;currentMain=d;
-  const doneMap = new Map(JSON.parse(localStorage.getItem(keyComp)||'[]').map(x=>[x.waybill,true]));
-  let grp = deliveries.filter(v=>parseDongHo(v.address).dong===dong);
-  // 완료된 고객(=모든 waybill 완료)은 하단
-  grp.sort((a,b)=>{
-    const A=isAllWaybillsCompleted(a), B=isAllWaybillsCompleted(b);
-    if(A&&!B) return 1; if(!A&&B) return -1;
-    return parseDongHo(b.address).ho - parseDongHo(a.address).ho;
-  });
-  currentGroup=grp;
-  cardHead.textContent=`${dong}동 고객 (${grp.length}건)`;cardAddr.textContent=d.address;
-  groupList.innerHTML=grp.map(x=>{
-    const p=parseDongHo(x.address),col=colorForDong(String(p.dong));
-    const op=isAllWaybillsCompleted(x)?'opacity:.5;':'';
-    return `<div class="item" data-id="${x.id}" style="${op}">
-      <div class="line1"><span class="badge" style="background:${col}">${x.boxes}</span>
-      <div style="flex:1"><b>${x.name}</b> · ${x.phone}<br>
-      <span class="muted">${x.address}</span></div>
-      <span class="muted">운송장 ${x.waybills.length}개</span></div></div>`;
-  }).join('');
-  groupList.querySelectorAll('.item').forEach(el=>{
-    el.onclick=()=>{const id=el.dataset.id;const t=currentGroup.find(v=>v.id===id);if(t)openDetail(t);};
-  });
-  card.classList.add('active');
-}
-function closeCard(){card.classList.remove('active');}
-
-/* 상세 고객 카드 */
-const detail=document.getElementById('detail');
-const imgToday=document.getElementById('imgToday'), imgPrev=document.getElementById('imgPrev');
-const entCode=document.getElementById('entCode'), reqNote=document.getElementById('reqNote');
-const faceToFace=document.getElementById('faceToFace'), hasReceiver=document.getElementById('hasReceiver');
-const placeSelect=document.getElementById('placeSelect'), driverNote=document.getElementById('driverNote');
-const wbTable=document.getElementById('wbTable').querySelector('tbody');
-const btnPhoto=document.getElementById('btnPhoto'), btnComplete=document.getElementById('btnComplete');
-let sel=null;
+let SEL=null;           // 현재 고객
+let photoOK=false;      // 보관장소 선택시 사진 여부
 
 function openDetail(c){
-  sel=c;
-  document.getElementById('detailTitle').textContent = `${c.name} (${c.phone})`;
-  document.getElementById('detailAddr').textContent  = `${c.address}`;
-  // 읽기 노트 로드(고객 단위)
-  const notes=JSON.parse(localStorage.getItem(keyNotes(c.id))||'{}');
-  entCode.value = notes.entCode||''; reqNote.value = notes.reqNote||'';
-  // 기사 선택 초기값
-  faceToFace.checked=false; hasReceiver.checked=false;
-  placeSelect.value='문앞'; driverNote.value='';
-  // 운송장 테이블
-  renderWaybillTable(c);
-  // 사진 비교(운송장 최근 사진 1장을 대표로 - 가장 최근 업로드가 있는 운송장 기준)
-  loadPhotoCompare(c);
-  // 카메라 버튼 토글(대면배송 체크 시 비활성)
-  applyPhotoEnableRule();
+  SEL=c; photoOK=false; btnDone.disabled=true;
+  dTitle.textContent = `${c.name||'고객'} · 📦 ${(c.waybills||[]).length}개`;
+  dAddr.textContent  = c.address || '';
+
+  faceChk.checked=false; storeChk.checked=false; placeSel.value='문앞';
+  renderWBList();
+  applyButtonsState();
   detail.classList.add('active');
 }
-function closeDetail(){ detail.classList.remove('active'); }
+btnClose.onclick=()=>detail.classList.remove('active');
 
-function renderWaybillTable(c){
-  const comp = JSON.parse(localStorage.getItem(keyComp)||'[]');
-  wbTable.innerHTML = c.waybills.map(wb=>{
-    const p=c.products?.[wb]||{sender:'미상',item:'일반',highValue:false};
-    const done = comp.some(x=>x.waybill===wb);
-    return `<tr data-wb="${wb}" style="${done?'opacity:.5;':''}">
-      <td style="text-align:center"><input type="checkbox" ${done?'disabled':''}></td>
-      <td>${wb}</td><td>${p.sender||''}</td><td>${p.item||''}</td><td>${p.highValue?'🔴':''}</td>
-    </tr>`;
-  }).join('');
+// 운송장 리스트(클릭 → 추적모달)
+function renderWBList(){
+  const arr = SEL?.waybills || [];
+  wbList.innerHTML = arr.map(w=>`
+    <div class="wb" data-code="${w.code}">
+      <div><span class="badge">#</span> ${w.code}</div>
+      <div class="muted">${w.productName||''} ${w.fragile?'· 취급주의':''}</div>
+    </div>
+  `).join('') || '<div class="muted">운송장이 없습니다.</div>';
+
+  wbList.querySelectorAll('.wb').forEach(el=>{
+    el.onclick = ()=> showTrace(el.getAttribute('data-code'));
+  });
 }
 
-/* 대표 사진 비교 로딩: 금일/직전 (운송장 단위로 저장됨) */
-function loadPhotoCompare(c){
-  // 고객의 모든 운송장 중 가장 최근 업로드가 있는 것을 골라서 대표 비교
-  let latest = null;
-  c.waybills.forEach(wb=>{
-    const arr = JSON.parse(localStorage.getItem(keyPhotosWB(wb))||'[]');
-    if(arr.length && (!latest || arr[0].ts > latest.ts)){
-      latest = { wb, arr };
-    }
-  });
-  if(latest){
-    imgToday.src = latest.arr[0]?.data||'';
-    imgPrev.src  = latest.arr[1]?.data||'';
+/* 상태 규칙
+  - 대면배송 체크시: 사진 없이 완료 가능(완료 버튼 활성)
+  - 보관장소 체크시: 사진 필수(사진 업로드 이후 완료 버튼 활성)
+  - 둘 다 미체크: 기본 문앞 → 자유(사진 없이도 가능하도록 유지)
+*/
+function applyButtonsState(){
+  if(faceChk.checked){
+    btnPhoto.disabled = true;
+    btnDone.disabled  = false; // 사진 없이 가능
+  }else if(storeChk.checked){
+    btnPhoto.disabled = false;
+    btnDone.disabled  = !photoOK; // 사진 찍어야 가능
   }else{
-    imgToday.src=''; imgPrev.src='';
+    // 기본 문앞: 사진 없어도 완료 가능(요청에 명시 없으므로 유연 처리)
+    btnPhoto.disabled = false;
+    btnDone.disabled  = false;
   }
 }
+faceChk.onchange=()=>{ if(faceChk.checked) storeChk.checked=false; applyButtonsState(); };
+storeChk.onchange=()=>{ if(storeChk.checked) faceChk.checked=false; applyButtonsState(); };
 
-/* 카메라 버튼 활성 규칙 */
-function applyPhotoEnableRule(){
-  // 대면배송 체크시: 카메라 비활성
-  btnPhoto.disabled = !!faceToFace.checked;
-}
-faceToFace.onchange = applyPhotoEnableRule;
-
-/* 사진 촬영/전송
- * 체크된 운송장만 전송 → 해당 운송장 키에 저장
- * 아무것도 체크 안 하면 고객의 모든 미완 운송장에 동일 사진 저장(완료 처리 전 단계)
- */
-btnPhoto.onclick = ()=>{
-  if(!sel) return;
-  const rows=[...wbTable.querySelectorAll('tr')];
-  const targetWBs = rows.filter(tr=>tr.querySelector('input[type=checkbox]')?.checked)
-                        .map(tr=>tr.dataset.wb);
-  const comp = JSON.parse(localStorage.getItem(keyComp)||'[]');
-  const remaining = sel.waybills.filter(wb=>!comp.some(x=>x.waybill===wb));
-  const wbList = targetWBs.length? targetWBs : remaining;
-  if(wbList.length===0){ alert('이미 모든 운송장이 완료되었습니다.'); return; }
-
-  const i=document.createElement('input'); i.type='file'; i.accept='image/*'; i.capture='environment';
-  i.onchange=e=>{
+/* 사진촬영 → 운송장 단위로 최신 2장까지 모아두기(대표 운송장에 기록) */
+btnPhoto.onclick=()=>{
+  if(!SEL || !(SEL.waybills||[]).length) return alert('운송장이 없습니다.');
+  const targetCode = SEL.waybills[0].code; // 대표 운송장(첫번째)에 저장
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.capture='environment';
+  inp.onchange=e=>{
     const f=e.target.files?.[0]; if(!f) return;
-    const r=new FileReader();
-    r.onload=()=>{
-      wbList.forEach(wb=>{
-        const arr = JSON.parse(localStorage.getItem(keyPhotosWB(wb))||'[]');
-        arr.unshift({ts:Date.now(),data:r.result});
-        localStorage.setItem(keyPhotosWB(wb), JSON.stringify(arr));
-      });
-      alert(`📸 사진 저장 완료 (${wbList.length}건)`);
-      loadPhotoCompare(sel); // 대표 비교 갱신
+    const rd=new FileReader();
+    rd.onload=()=>{
+      const key=PH_WB(targetCode);
+      const arr = JSON.parse(localStorage.getItem(key)||'[]');
+      arr.unshift({ts:Date.now(),data:rd.result});
+      localStorage.setItem(key, JSON.stringify(arr.slice(0,10)));
+      photoOK=true; applyButtonsState();
+      alert('📸 사진이 저장되었습니다.');
     };
-    r.readAsDataURL(f);
+    rd.readAsDataURL(f);
   };
-  i.click();
+  inp.click();
 };
 
-/* 완료 처리
- * 체크된 운송장만 완료, 없으면 전체 미완 운송장 완료
- * 모든 운송장 완료 시 마커 반투명 & 박스수량 0 표기(또는 유지)
- */
-btnComplete.onclick = ()=>{
-  if(!sel) return;
-  const rows=[...wbTable.querySelectorAll('tr')];
-  let pick = rows.filter(tr=>tr.querySelector('input[type=checkbox]')?.checked).map(tr=>tr.dataset.wb);
+/* 배송완료 → 고객 단위 완료(모든 운송장 기록) + 마커 반투명 */
+btnDone.onclick=()=>{
+  if(!SEL) return;
+  if(storeChk.checked && !photoOK) return alert('보관장소 선택 시 사진이 필요합니다.');
 
-  const comp = JSON.parse(localStorage.getItem(keyComp)||'[]');
-  const remaining = sel.waybills.filter(wb=>!comp.some(x=>x.waybill===wb));
-  if(pick.length===0) pick = remaining;
+  const comp = JSON.parse(localStorage.getItem(COMPLETED_KEY)||'[]');
+  const codes = (SEL.waybills||[]).map(w=>w.code);
+  codes.forEach(code=>comp.push({id:code,date:new Date().toISOString(),addr:SEL.address}));
+  localStorage.setItem(COMPLETED_KEY, JSON.stringify(comp));
 
-  if(pick.length===0){ alert('완료할 운송장이 없습니다.'); return; }
+  const mk = markerByCid[cidOf(SEL)];
+  if(mk) mk.getContent().style.opacity='0.4';
 
-  // 완료 기록
-  const now = new Date().toISOString();
-  pick.forEach(wb=>{ comp.push({waybill:wb, custId:sel.id, date:now}); });
-  localStorage.setItem(keyComp, JSON.stringify(comp));
-
-  // UI 갱신: 테이블, 마커, 그룹카드
-  renderWaybillTable(sel);
-  // 박스 수량 = 전체 - 완료수
-  const doneCnt = sel.waybills.filter(wb=>comp.some(x=>x.waybill===wb)).length;
-  const remain  = sel.waybills.length - doneCnt;
-  elByCustId[sel.id].textContent = remain>0? remain : '0';
-  if(remain===0) elByCustId[sel.id].style.opacity='0.4';
-
-  alert(`✅ 완료 처리: ${pick.length}건`);
-  // 그룹 카드 새로 그림
-  if(currentMain) openCardForDong(currentMain);
+  alert(`✅ 배송완료 처리: ${codes.length}건`);
+  detail.classList.remove('active');
 };
 
-/* 네비(옵션)
-function navTo(addr,lat,lng){
-  const appURL=`kakaomap://route?ep=${lat},${lng}&by=CAR`;
-  const webURL=`https://map.kakao.com/link/to/${encodeURIComponent(addr)},${lat},${lng}`;
-  location.href=appURL; setTimeout(()=>location.href=webURL, 1000);
+/* ---------- 화물추적 모달 ---------- */
+const trace = document.getElementById('trace');
+const tWb = document.getElementById('tWb');
+const tStatus = document.getElementById('tStatus');
+const tShipper = document.getElementById('tShipper');
+const tRecv = document.getElementById('tRecv');
+const tProd = document.getElementById('tProd');
+const tImg0 = document.getElementById('tImg0');
+const tImg1 = document.getElementById('tImg1');
+
+function showTrace(code){
+  // 선택 코드에 해당하는 운송장 찾기
+  const wb = (SEL?.waybills||[]).find(w=>w.code===code);
+  if(!wb) return;
+
+  tWb.textContent   = `운송장 ${wb.code}`;
+  tStatus.textContent = `상태: ${wb.status || '이동중'}`;
+  tShipper.textContent = wb.shipper || '-';
+  tRecv.textContent    = wb.recipient || (SEL?.name||'-');
+  tProd.textContent    = `${wb.productName||'-'}${wb.fragile?' (취급주의)':''}`;
+
+  // 운송장 단위 사진 두 장(최근/직전)
+  const key = PH_WB(wb.code);
+  const arr = JSON.parse(localStorage.getItem(key)||'[]');
+  tImg0.src = arr[0]?.data || ''; tImg0.alt = arr[0]?'최근사진':'최근사진 없음';
+  tImg1.src = arr[1]?.data || ''; tImg1.alt = arr[1]?'직전사진':'직전사진 없음';
+
+  trace.style.display='flex';
 }
-*/
+function hideTrace(){ trace.style.display='none'; }
 
-function closeDetail(){ detail.classList.remove('active'); }
-function closeCard(){ card.classList.remove('active'); }
-/* 마커 클릭 시 상세 */
-function openDetail(c){ /* 위에 정의됨 */ detail.classList.add('active'); }
+window.hideTrace = hideTrace;
 </script>
 </body>
 </html>
