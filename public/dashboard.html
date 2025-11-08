@@ -2,53 +2,134 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>대시보드 - The Listen</title>
+<title>The Listen AI 배송앱 - 대시보드</title>
 <style>
-  body{margin:0;background:#f5f7fa;font-family:"Noto Sans KR",sans-serif}
-  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:800}
-  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;max-width:760px;margin:16px auto;padding:12px}
-  .card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 10px 26px rgba(0,0,0,.06);cursor:pointer}
-  .title{font-weight:900;margin-bottom:6px}
-  .num{font-weight:900;font-size:24px;text-align:right}
-  .muted{color:#6b7280;margin-top:6px}
+  :root{
+    --brand:#007bff; --bg:#f5f7fa; --card:#fff; --muted:#6b7280;
+  }
+  body{margin:0;font-family:"Noto Sans KR",sans-serif;background:var(--bg);color:#222}
+  header{
+    background:var(--brand);color:#fff;text-align:center;
+    font-weight:900;padding:14px;font-size:18px;letter-spacing:.5px
+  }
+  /* 전체 구조 */
+  .container{display:flex;flex-direction:column;min-height:100vh}
+  /* 공지 슬라이드 영역 */
+  .notice-slider{
+    position:relative;flex:1;max-height:33vh;overflow:hidden;background:#fff;
+    box-shadow:0 6px 20px rgba(0,0,0,.08)
+  }
+  .slides{display:flex;transition:transform .6s ease}
+  .slide{min-width:100%;box-sizing:border-box;padding:16px;text-align:center}
+  .slide img{width:100%;height:180px;object-fit:cover;border-radius:12px}
+  .slide h3{margin:12px 0 4px;font-weight:900;color:#007bff}
+  .slide p{color:#444;font-size:15px;line-height:1.5}
+  .dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;background:#ddd;cursor:pointer}
+  .dot.active{background:#007bff}
+  /* 카드 그리드 */
+  .grid{flex:2;display:grid;grid-template-columns:repeat(2,1fr);gap:14px;
+        max-width:760px;margin:18px auto;padding:12px;box-sizing:border-box}
+  .card{
+    background:var(--card);border-radius:18px;padding:18px;
+    box-shadow:0 8px 24px rgba(0,0,0,.06);cursor:pointer;
+    display:flex;flex-direction:column;justify-content:center;
+    transition:transform .15s ease, box-shadow .15s ease
+  }
+  .card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.1)}
+  .title{font-weight:900;margin-bottom:4px;font-size:16px}
+  .num{font-weight:900;font-size:26px;text-align:right;color:#007bff}
+  .muted{color:var(--muted);margin-top:4px;font-size:13px;text-align:right}
+  /* 앱 사용방법 전체폭 */
+  .full{grid-column:1/3;background:#e9f2ff}
+  .full .title{color:#004b9a;text-align:center;font-size:17px}
+  /* 반응형 */
+  @media(max-width:600px){
+    .grid{grid-template-columns:repeat(2,1fr);gap:10px}
+    .slide img{height:140px}
+  }
 </style>
 </head>
 <body>
-<header>대시보드</header>
-<div class="grid">
-  <div class="card" onclick="location.href='depart.html'">
-    <div class="title">배송출발</div>
-    <div class="num" id="scannedCnt">0</div>
-    <div class="muted">스캔 잡은 수량</div>
+<header>The Listen AI 배송앱</header>
+
+<div class="container">
+  <!-- 공지 슬라이드 -->
+  <div class="notice-slider">
+    <div class="slides" id="slides">
+      <div class="slide">
+        <img src="https://picsum.photos/seed/aiapp1/800/300" alt="공지1">
+        <h3>🚀 시스템 점검 안내</h3>
+        <p>11월 10일(토) 02시~04시 사이 서버 점검 예정입니다.<br>배송 출발 전 반드시 데이터 동기화 확인 바랍니다.</p>
+      </div>
+      <div class="slide">
+        <img src="https://picsum.photos/seed/aiapp2/800/300" alt="공지2">
+        <h3>📦 새 버전 업데이트</h3>
+        <p>AI 배송경로 자동 최적화 및 스캔속도 개선 기능이 추가되었습니다.<br>업데이트 후 재시작을 권장합니다.</p>
+      </div>
+      <div class="slide">
+        <img src="https://picsum.photos/seed/aiapp3/800/300" alt="공지3">
+        <h3>🧭 사용설명서 추가</h3>
+        <p>앱 사용방법 메뉴에서 단계별 설치 / 스캐너 연결 / 지도연동 방법을 확인하세요.</p>
+      </div>
+    </div>
+    <div class="dots" id="dots"></div>
   </div>
-  <div class="card" onclick="location.href='map.html'">
-    <div class="title">배송중 (지도)</div>
-    <div class="num" id="inProgressCnt">0</div>
-    <div class="muted">진행 중</div>
-  </div>
-  <div class="card" onclick="location.href='completed.html'">
-    <div class="title">배송완료</div>
-    <div class="num" id="completedCnt">0</div>
-    <div class="muted">당일 완료</div>
-  </div>
-  <div class="card" onclick="location.href='stats.html'">
-    <div class="title">실적 조회</div>
-    <div class="num">▶</div>
-  </div>
-  <div class="card" onclick="location.href='howto.html'">
-    <div class="title">앱 사용방법/회사 설명</div>
-    <div class="num">▶</div>
+
+  <!-- 주요 기능 카드 -->
+  <div class="grid">
+    <div class="card" onclick="location.href='depart.html'">
+      <div class="title">배송출발</div>
+      <div class="num" id="scannedCnt">0</div>
+      <div class="muted">스캔 완료 수량</div>
+    </div>
+    <div class="card" onclick="location.href='map.html'">
+      <div class="title">배송중 (지도)</div>
+      <div class="num" id="inProgressCnt">0</div>
+      <div class="muted">진행 중</div>
+    </div>
+    <div class="card" onclick="location.href='completed.html'">
+      <div class="title">배송완료</div>
+      <div class="num" id="completedCnt">0</div>
+      <div class="muted">당일 완료</div>
+    </div>
+    <div class="card" onclick="location.href='stats.html'">
+      <div class="title">실적 조회</div>
+      <div class="num">▶</div>
+    </div>
+    <div class="card full" onclick="location.href='howto.html'">
+      <div class="title">📘 앱 사용방법 & 시스템 설명 보기</div>
+      <img src="https://picsum.photos/seed/howto/800/250" alt="사용설명서 캡처" style="width:100%;border-radius:10px;margin-top:8px">
+    </div>
   </div>
 </div>
+
 <script>
-  const completed = JSON.parse(localStorage.getItem('completed')||'[]');
-  const today = new Date().toISOString().slice(0,10);
-  const todayDone = completed.filter(x=>x.date===today).length;
-  const scanned = Number(localStorage.getItem('scanned')||'0');
-  const total = Number(localStorage.getItem('totalDeliveries')||'0');
-  document.getElementById('completedCnt').innerText = todayDone;
-  document.getElementById('scannedCnt').innerText = scanned;
-  document.getElementById('inProgressCnt').innerText = Math.max((total||0) - todayDone, 0);
+/* ====== 공지 슬라이드 ====== */
+const slides=document.getElementById('slides');
+const dotsDiv=document.getElementById('dots');
+const totalSlides=slides.children.length;
+let index=0;
+for(let i=0;i<totalSlides;i++){
+  const d=document.createElement('div');d.className='dot'+(i===0?' active':'');
+  d.onclick=()=>showSlide(i);dotsDiv.appendChild(d);
+}
+function showSlide(i){
+  index=i;if(index<0)index=totalSlides-1;if(index>=totalSlides)index=0;
+  slides.style.transform=`translateX(${-100*index}%)`;
+  document.querySelectorAll('.dot').forEach((d,j)=>d.classList.toggle('active',j===index));
+}
+setInterval(()=>showSlide(index+1),5000);
+
+/* ====== 대시보드 수량 ====== */
+const completed = JSON.parse(localStorage.getItem('completed')||'[]');
+const today = new Date().toISOString().slice(0,10);
+const todayDone = completed.filter(x=>x.date?.slice(0,10)===today).length;
+const scanned = Number(localStorage.getItem('scanned')||'0');
+const total = Number(localStorage.getItem('totalDeliveries')||'0');
+document.getElementById('completedCnt').innerText = todayDone;
+document.getElementById('scannedCnt').innerText = scanned;
+document.getElementById('inProgressCnt').innerText = Math.max((total||0) - todayDone, 0);
 </script>
 </body>
 </html>
