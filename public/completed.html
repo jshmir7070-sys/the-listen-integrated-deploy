@@ -1,30 +1,66 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>배송완료 - The Listen</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>배송완료 내역 - The Listen</title>
+<link rel="stylesheet" href="../assets/styles/base.css" />
 <style>
-  body{margin:0;background:#f7f9fc;font-family:"Noto Sans KR",sans-serif}
-  header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:800}
-  .wrap{max-width:780px;margin:16px auto;padding:12px}
-  .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 10px 26px rgba(0,0,0,.06);margin-bottom:10px}
-  .row{display:flex;justify-content:space-between}
+  header { background: #007bff; color: #fff; text-align: center; padding: 12px; font-weight: 900; }
+  .wrap { max-width: 720px; margin: auto; padding: 14px; }
+  .card { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 12px;
+          box-shadow: 0 4px 14px rgba(0,0,0,0.08); cursor: pointer; }
+  .title { font-weight: 800; font-size: 16px; }
+  .muted { color: #6b7280; font-size: 0.9rem; }
+  .badge { display: inline-flex; align-items: center; justify-content: center;
+           background: #007bff; color: #fff; font-weight: 900;
+           border-radius: 999px; width: 28px; height: 28px; margin-right: 6px; }
+  .none { text-align: center; color: #6b7280; padding: 20px 0; }
 </style>
 </head>
 <body>
-<header>배송완료(당일)</header>
-<div class="wrap" id="list"></div>
+<header>📦 배송완료 내역 (The Listen)</header>
+<div class="wrap" id="root">로딩 중...</div>
+
 <script>
-const today=new Date().toISOString().slice(0,10);
-const completed=(JSON.parse(localStorage.getItem('completed')||'[]')).filter(x=>x.date===today);
-const $list=document.getElementById('list');
-$list.innerHTML = (completed.length===0) ? '<div class="card">당일 완료 건이 없습니다.</div>'
-  : completed.map(c=>`
-    <div class="card">
-      <div class="row"><div><b>운송장</b> ${c.id||'-'}</div><div>${c.date}</div></div>
-      <div><b>주소</b> ${c.address}</div>
-      <div style="margin-top:6px;color:#6b7280;">사진 전송: ${c.photo?'완료':'-'}</div>
-    </div>`).join('');
+const root = document.getElementById('root');
+const completed = JSON.parse(localStorage.getItem('completed') || '[]');
+
+// 날짜별 그룹화
+const byDate = {};
+completed.forEach(c => {
+  const date = (c.date || '').slice(0,10);
+  if (!byDate[date]) byDate[date] = [];
+  byDate[date].push(c);
+});
+
+if (!Object.keys(byDate).length) {
+  root.innerHTML = '<div class="none">아직 완료된 배송이 없습니다.</div>';
+} else {
+  const sortedDates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a));
+  root.innerHTML = sortedDates.map(d => {
+    const list = byDate[d].map((x,i)=>`
+      <div class="card" data-id="${x.id}">
+        <div class="row" style="align-items:center;justify-content:space-between;">
+          <div>
+            <div class="title">${x.address || '주소 미상'}</div>
+            <div class="muted">${(x.waybills||[]).length ? '운송장 '+x.waybills.join(', ') : '단일 운송장'}</div>
+          </div>
+          <div class="badge">${i+1}</div>
+        </div>
+      </div>`).join('');
+    return `<h3>${d}</h3>${list}`;
+  }).join('');
+}
+
+// 카드 클릭 시 상세보기 이동
+root.addEventListener('click', e => {
+  const card = e.target.closest('.card');
+  if (!card) return;
+  const id = card.getAttribute('data-id');
+  localStorage.setItem('detail_target', id);
+  location.href = 'receipt.html';
+});
 </script>
 </body>
 </html>
