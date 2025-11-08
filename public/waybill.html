@@ -1,108 +1,69 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>운송장 입력 - The Listen</title>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>운송장 입력 - The Listen</title>
 <script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js"></script>
 <style>
-  :root{--brand:#007bff;--bg:#f7f9fc;--card:#fff;--muted:#6b7280;--border:#e5e7eb;}
-  body{margin:0;background:var(--bg);font-family:"Noto Sans KR",sans-serif}
-  header{background:var(--brand);color:#fff;text-align:center;padding:12px;font-weight:900}
-  .wrap{max-width:520px;margin:auto;padding:14px}
-  .input-group{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-  input[type="number"]{flex:1;padding:12px;font-size:18px;border:1px solid var(--border);border-radius:10px}
-  .btn{padding:12px 14px;border:none;border-radius:10px;background:#007bff;color:#fff;font-weight:700;cursor:pointer}
-  .btn.gray{background:#6b7280}
-  .icon-btn{background:#007bff;color:#fff;border:none;border-radius:10px;padding:12px 14px;font-size:18px;cursor:pointer}
-  .list{margin-top:12px;background:var(--card);border:1px solid var(--border);border-radius:12px;max-height:60vh;overflow:auto}
-  .item{padding:10px 12px;border-bottom:1px solid var(--border)}
-  .item:last-child{border-bottom:none}
-</style>
-</head>
+body{margin:0;background:#f7f9fc;font-family:"Noto Sans KR",sans-serif}
+header{background:#007bff;color:#fff;text-align:center;padding:12px;font-weight:900}
+.wrap{max-width:520px;margin:auto;padding:14px}
+.input-group{display:flex;gap:8px;margin-bottom:8px}
+input[type=number]{flex:1;padding:12px;font-size:18px;border:1px solid #e5e7eb;border-radius:10px}
+.btn{padding:12px;border:none;border-radius:10px;background:#007bff;color:#fff;font-weight:700;cursor:pointer}
+.icon{font-size:22px}
+.list{border:1px solid #e5e7eb;border-radius:12px;max-height:60vh;overflow:auto;background:#fff;padding:8px}
+.item{padding:8px;border-bottom:1px solid #e5e7eb}
+</style></head>
 <body>
-<header>📦 운송장 입력 (The Listen)</header>
+<header>📦 운송장 입력</header>
 <div class="wrap">
   <div class="input-group">
-    <input id="waybill" type="number" inputmode="numeric" placeholder="운송장 번호 입력" />
-    <button class="icon-btn" id="cameraBtn" title="후면 카메라">📷</button>
+    <input id="num" type="number" inputmode="numeric" placeholder="운송장 번호 입력">
+    <button class="btn icon" id="cam">📷</button>
   </div>
   <div class="input-group">
-    <button class="btn" id="addBtn" style="flex:1">추가</button>
-    <button class="btn gray" id="backBtn" style="flex:1">⬅️ 뒤로가기</button>
+    <button class="btn" id="add" style="flex:1">추가</button>
+    <button class="btn" style="flex:1;background:#6b7280" onclick="location.href='depart.html'">뒤로가기</button>
   </div>
-
-  <div class="list" id="wbList"></div>
+  <div class="list" id="list"></div>
 </div>
-
 <script>
 const reader=new ZXing.BrowserMultiFormatReader();
 let list=JSON.parse(localStorage.getItem("waybills")||"[]");
-let customers=JSON.parse(localStorage.getItem("customers")||"[]");
 let details=JSON.parse(localStorage.getItem("waybillDetails")||"{}");
-
-function render(){
-  const wbList=document.getElementById("wbList");
-  wbList.innerHTML=list.slice().reverse().map((x,i)=>`
-    <div class="item">#${list.length-i} · ${x.code} <span style="color:#6b7280">(${new Date(x.time).toLocaleString()})</span></div>
-  `).join('') || `<div class="item" style="color:#6b7280">아직 등록된 운송장이 없습니다.</div>`;
-}
-
-document.getElementById("addBtn").onclick=()=>{
-  const v=document.getElementById("waybill").value.trim();
-  if(!v) return alert("운송장 번호를 입력하세요.");
-  ding();
-  addWaybill(v,"waybill-page");
-  document.getElementById("waybill").value="";
-  render();
+let customers=JSON.parse(localStorage.getItem("customers")||"[]");
+function render(){listDiv.innerHTML=list.map((x,i)=>`<div class="item">${i+1}. ${x.code}</div>`).join('')||'<div class="item">등록 없음</div>';}
+const listDiv=document.getElementById("list");
+document.getElementById("add").onclick=()=>{
+  const v=num.value.trim(); if(!v) return;
+  ding(); add(v,"manual"); num.value=""; render();
 };
-document.getElementById("backBtn").onclick=()=>location.href="depart.html";
-
-// 카메라 아이콘 → 후면 카메라 스캔 오버레이(간단)
-document.getElementById("cameraBtn").onclick=()=>{
-  const overlay=document.createElement('div');
-  overlay.style.cssText="position:fixed;inset:0;background:#000A;display:flex;align-items:center;justify-content:center;z-index:9999";
-  const video=document.createElement('video'); video.setAttribute('playsinline',''); video.style.cssText="width:92%;max-width:520px;border-radius:12px;background:#000";
-  const close=document.createElement('button'); close.textContent='닫기'; close.className='btn'; close.style.cssText='position:fixed;bottom:20px';
-  overlay.appendChild(video); overlay.appendChild(close); document.body.appendChild(overlay);
-  reader.decodeFromVideoDevice(null,video,(res,err)=>{ if(res){ addWaybill(res.text,"waybill-camera"); ding(); reader.reset(); document.body.removeChild(overlay); render(); } });
-  close.onclick=()=>{ reader.reset(); document.body.removeChild(overlay); };
+document.getElementById("cam").onclick=()=>{
+  const ov=document.createElement('div');
+  ov.style.cssText="position:fixed;inset:0;background:#000a;display:flex;justify-content:center;align-items:center;z-index:99";
+  const v=document.createElement('video');v.setAttribute('playsinline','');v.style.cssText="width:90%;border-radius:12px";
+  const b=document.createElement('button');b.textContent='닫기';b.className='btn';b.style.cssText='position:fixed;bottom:20px';
+  ov.append(v,b);document.body.appendChild(ov);
+  reader.decodeFromVideoDevice(null,v,(res,err)=>{if(res){add(res.text,"camera");reader.reset();document.body.removeChild(ov);ding();render();}});
+  b.onclick=()=>{reader.reset();document.body.removeChild(ov);};
 };
-
-function addWaybill(waybill, source){
-  // 상세 생성(샘플) + 최소정보 병합
-  if(!details[waybill]){
-    const idx=Object.keys(details).length+1;
-    details[waybill]={
-      waybill,
-      sender:{name:`발송인${idx}`, phone:`02-1000-${String(1000+idx)}`},
-      receiver:{name:`받는분${idx}`, phone:`010-9000-${String(1000+idx)}`, address:`경기 시흥시 조남동 ${100+(idx%8)}동 ${400+idx}호`},
-      product:{name:`상품${idx}`},
-      route:{hub:"시흥HUB", path:["집하","허브","배송"]},
-      scannedAt:new Date().toISOString()
-    };
+function add(code,src){
+  if(!details[code]){
+    const i=Object.keys(details).length+1;
+    details[code]={waybill:code,sender:{name:`발송${i}`},receiver:{name:`고객${i}`,phone:`010-22${i}3-${4000+i}`,address:`시흥시 조남동 ${100+(i%4)}동 ${500+i}호`},product:{name:`상품${i}`},route:{hub:"시흥HUB"},scannedAt:new Date().toISOString()};
   }
   localStorage.setItem("waybillDetails",JSON.stringify(details));
-  list.push({code:waybill, time:new Date().toISOString(), source});
-  localStorage.setItem("waybills",JSON.stringify(list));
-
-  const r=details[waybill].receiver;
-  const minimal={id:waybill,name:r.name,phone:r.phone,address:r.address,boxes:1,lat:37.379+(Math.random()-0.5)*0.01,lng:126.806+(Math.random()-0.5)*0.01,order:null};
-  mergeCustomer(minimal);
+  list.push({code,time:new Date().toISOString(),src});localStorage.setItem("waybills",JSON.stringify(list));
+  const r=details[code].receiver;
+  const n={id:code,name:r.name,phone:r.phone,address:r.address,boxes:1,lat:37.379+(Math.random()-0.5)*0.01,lng:126.806+(Math.random()-0.5)*0.01};
+  merge(n);
 }
-
-function mergeCustomer(newC){
-  // depart와 동일: 2개 이상 일치
-  const score=(a,b)=>['name','phone','address'].reduce((s,k)=>s + (a[k]&&b[k]&&a[k]===b[k]?1:0),0);
-  const idx=customers.findIndex(c=>score(c,newC)>=2);
-  if(idx>=0){ customers[idx].boxes += newC.boxes; }
-  else{ customers.push(newC); }
+function merge(n){
+  const s=(a,b)=>['name','phone','address'].reduce((c,k)=>c+(a[k]&&b[k]&&a[k]===b[k]?1:0),0);
+  const i=customers.findIndex(c=>s(c,n)>=2);
+  if(i>=0)customers[i].boxes+=n.boxes;else customers.push(n);
   localStorage.setItem("customers",JSON.stringify(customers));
 }
-
-function ding(){ const a=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"); a.play(); }
-
+function ding(){new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg").play();}
 render();
 </script>
-</body>
-</html>
+</body></html>
